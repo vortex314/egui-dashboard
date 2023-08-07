@@ -1,0 +1,22 @@
+[package]
+name = "egui-test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version="4.0.8", features=["derive"]}
+eframe = "0.22.0"
+egui = "0.22.0"
+log = "0.4.14" # for logging
+simplelog = "0.12.1" # for logging
+env_logger = "0.10.0"
+redis = { git = "https://github.com/redis-rs/redis-rs", branch = "resp3",features = ["tokio-comp"] }
+chrono = "0.4.19" # for time
+mqtt-async-client = "0.3.1" # for mqtt
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["full"] }
+regex = "*"
+serde = "1.0.163" # for a turtle description
+serde_yaml = "0.9.21" # for a yaml description
