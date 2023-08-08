@@ -2,14 +2,14 @@ extern crate log;
 use log::{debug, error, info, trace, warn};
 use serde_yaml::Value;
 
-use fltk::app::{awake, App};
-
+use std::collections::BTreeMap;
 use std::fmt::Error;
 use std::thread::{self, sleep, Thread};
 
-use crate::pubsub_widget::{
-    get_pos, get_size, value_string_default, PubSubCmd, PubSubEvent, PubSubWidget,
+use crate::config::{
+    get_pos, get_size, value_string_default
 };
+use crate::pubsub::{PubSubCmd,PubSubEvent};
 use mqtt_async_client::client::{Client, ReadResult, SubscribeTopic};
 use mqtt_async_client::client::{Publish, QoS, Subscribe};
 use tokio::sync::broadcast;
@@ -47,7 +47,6 @@ pub async fn mqtt(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) {
             match read_result {
                 Ok(msg) => {
                     info!("Mqtt topic: {}", msg.topic().to_string(),);
-                    awake();
                     match tx_broadcast.send(PubSubEvent::Publish {
                         topic: msg.topic().to_string(),
                         message: String::from_utf8_lossy(msg.payload()).to_string(),

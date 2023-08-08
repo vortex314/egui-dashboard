@@ -73,14 +73,6 @@ impl EntryList {
     }
 }
 
-/* 
-fn display_list_ncurses(entries: &EntryList, table: &mut SmartTable) {
-    let mut row = 2;
-    for entry in entries.entries.iter() {
-        row += 1;
-    }
-}*/
-
 fn order_list(entry_list: &mut EntryList, ordering: OrderSort) {
     match ordering {
         OrderSort::Topic => {

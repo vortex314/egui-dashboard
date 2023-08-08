@@ -1,37 +1,16 @@
 use serde_yaml::Value;
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::Read;
+use log::{debug, error, info, trace, warn};
 
-use tokio::task::block_in_place;
-use tokio::sync::broadcast;
-use tokio::time::{self, Duration};
-use tokio::sync::mpsc::{Sender,Receiver};
-use tokio::task;
-use tokio_stream::StreamExt;
-
-#[derive(Debug, Clone)]
-pub struct PublishMessage {
-    topic: String,
-    message: String,
-}
-
-
-#[derive(Debug, Clone)]
-pub enum PubSubEvent {
-    Publish{ topic: String, message: String},
-}
-
-
-pub enum PubSubCmd {
-    Subscribe{ pattern: String },
-    Unsubscribe{ pattern: String },
-    Publish{ topic: String, message: String },
-}
-
-
-pub trait PubSubWidget {
-    fn new(grid: &mut Grid, config: &Value, tx_redis_cmd: Sender<PubSubCmd>) -> Self
-    where
-        Self: Sized;
-    fn on_publish(&mut self, topic: &String, message: &String);
+pub fn load_yaml_file(path: &str) -> BTreeMap<String, Value> {
+    let mut file = File::open(path).expect(std::format!("Unable to open file {} ", path).as_str());
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Unable to read file ");
+    let v: BTreeMap<String, Value> = serde_yaml::from_str(&contents).expect("Unable to parse YAML");
+    v
 }
 
 pub fn split_underscore(str: &String) -> (Option<&str>, Option<&str>) {

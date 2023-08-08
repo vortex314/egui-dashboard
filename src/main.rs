@@ -6,15 +6,29 @@ mod measurements;
 
 use crate::measurements::MeasurementWindow;
 use eframe::egui;
-mod redis_bridge;
-mod my_logger;
-mod sub_table;
+mod pubsub;
+mod logger;
+mod config;
 
-use sub_table::EntryList;
 use std::io::BufRead;
 use std::sync::*;
 use std::thread;
+use std::env;
 use log::{error, info, warn};
+
+use tokio::task::block_in_place;
+use tokio::sync::broadcast;
+use tokio::time::{self, Duration};
+use tokio::sync::mpsc::{Sender,Receiver,channel};
+use tokio::task;
+use tokio_stream::StreamExt;
+
+
+use pubsub::*;
+use logger::*;
+use config::*;
+use pubsub::mqtt_bridge::mqtt;
+use pubsub::redis_bridge::redis;
 
 pub struct MonitorApp {
     include_y: Vec<f64>,
@@ -70,20 +84,34 @@ struct Args {
     #[clap(short, long, default_value_t = 1000)]
     window_size: usize,
 
-    #[clap(short, long)]
-    include_y: Vec<f64>,
+    #[clap(short, long,default_value = "/Users/mg61dd/Developer/egui-dashboard/config.yaml")]
+    config: String,
 }
 
-fn main() {
+#[tokio::main(flavor = "multi_thread", worker_threads = 1)]
+async fn main() {
     let args = Args::parse();
+    env::set_var("RUST_LOG", "info");
+    let _ = logger::init();
+    info!("Starting up. Reading config file {}.", &args.config );
+
+    let config = Box::new(load_yaml_file(&args.config));
+
+    let (mut tx_publish, mut rx_publish) = broadcast::channel::<PubSubEvent>(16);
+    let (mut tx_redis_cmd, mut rx_redis_cmd) = channel::<PubSubCmd>(16);
+
+    let redis_config = config["redis"].clone();
+    let mqtt_config = config["mqtt"].clone();
+    let bc = tx_publish.clone();
+
+    tokio::spawn(async move {
+        redis(redis_config, tx_publish).await;
+    });
+    tokio::spawn(async move {
+        mqtt(mqtt_config, bc).await;
+    });
 
     let mut app = MonitorApp::new(args.window_size);
-
-    app.include_y = args.include_y;
-
     let native_options = eframe::NativeOptions::default();
-
-
-    info!("Main thread started");
     let _ = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
 }

@@ -8,9 +8,11 @@ use tokio::sync::broadcast;
 use tokio::time::{self, Duration};
 use tokio::{sync::mpsc, task};
 use tokio_stream::StreamExt;
+use redis::AsyncCommands;
 
+use crate::pubsub::PubSubEvent;
 
-pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) {
+pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) -> Result<(), Error>{
     loop {
         let url = format!(
             "redis://{}:{}/",
@@ -22,8 +24,16 @@ pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) 
             "Redis connecting {} ...  ",
             url
         );
-        let connection = client.get_async_connection().await.unwrap();
-        let mut pubsub = connection.into_pubsub();
+        let connection = client.get_async_connection().await;
+        match connection {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error connecting: {}", e);
+                sleep(Duration::from_secs(1)).await;
+                continue;
+            }
+        }
+        let mut pubsub = connection.unwrap().into_pubsub();
     //    let redis_cmd_channel = connection.into_monitor();
         pubsub.psubscribe("*").await.unwrap();
 

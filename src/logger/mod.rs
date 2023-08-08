@@ -3,7 +3,6 @@ use std::io::Write;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
-
 use env_logger;
 
 pub fn init() {
