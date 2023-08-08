@@ -3,10 +3,11 @@ use log::{debug, error, info, trace, warn};
 use serde_yaml::Value;
 
 use std::fmt::Error;
-use std::thread::{self, sleep, Thread};
+use std::thread::{self, Thread};
 use tokio::sync::broadcast;
 use tokio::time::{self, Duration};
 use tokio::{sync::mpsc, task};
+use tokio::time::sleep;
 use tokio_stream::StreamExt;
 use redis::AsyncCommands;
 

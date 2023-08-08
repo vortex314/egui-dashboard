@@ -105,7 +105,7 @@ async fn main() {
     let bc = tx_publish.clone();
 
     tokio::spawn(async move {
-        redis(redis_config, tx_publish).await;
+        let _ = redis(redis_config, tx_publish).await;
     });
     tokio::spawn(async move {
         mqtt(mqtt_config, bc).await;
