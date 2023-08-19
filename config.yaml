@@ -1,0 +1,14 @@
+redis:
+  host: pcthink.local
+  port: 6379
+mqtt:
+  host: pcthink.local
+  port: 1883
+screen:
+  resolution: [1024,768]
+  grid_size: 32
+status:
+  label: "USB0 System Alive"
+  src_topic: src/USB0/system/alive
+  src_value: true
+  src_timeout: 3000

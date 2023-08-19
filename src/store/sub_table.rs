@@ -7,6 +7,7 @@ pub enum OrderSort {
     Count,
 }
 
+#[derive(Debug)]
 pub struct Entry {
     pub topic: String,
     pub value: String,

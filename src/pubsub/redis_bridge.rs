@@ -2,18 +2,22 @@ extern crate log;
 use log::{debug, error, info, trace, warn};
 use serde_yaml::Value;
 
+use redis::AsyncCommands;
 use std::fmt::Error;
 use std::thread::{self, Thread};
 use tokio::sync::broadcast;
+use tokio::time::sleep;
 use tokio::time::{self, Duration};
 use tokio::{sync::mpsc, task};
-use tokio::time::sleep;
 use tokio_stream::StreamExt;
-use redis::AsyncCommands;
 
 use crate::pubsub::PubSubEvent;
 
-pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) -> Result<(), Error>{
+pub async fn redis(
+    config: Value,
+    tx_broadcast: broadcast::Sender<PubSubEvent>,
+) -> Result<(), Error> {
+    info!("Redis config {:?} ", config);
     loop {
         let url = format!(
             "redis://{}:{}/",
@@ -21,10 +25,7 @@ pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) 
             config["port"].as_str().or(Some("6379")).unwrap()
         );
         let client = redis::Client::open(url.clone()).unwrap();
-        info!(
-            "Redis connecting {} ...  ",
-            url
-        );
+        info!("Redis connecting {} ...  ", url);
         let connection = client.get_async_connection().await;
         match connection {
             Ok(_) => {}
@@ -35,11 +36,11 @@ pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) 
             }
         }
         let mut pubsub = connection.unwrap().into_pubsub();
-    //    let redis_cmd_channel = connection.into_monitor();
+        //    let redis_cmd_channel = connection.into_monitor();
         pubsub.psubscribe("*").await.unwrap();
 
         let mut pubsub_stream = pubsub.into_on_message();
-      /*   tokio::spawn(async move {
+        /*   tokio::spawn(async move {
             while let Some(cmd) = rx_cmd.recv().await {
                 match cmd {
                     RedisCmd::Stop => {
@@ -60,10 +61,9 @@ pub async fn redis(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) 
         );*/
 
         while let Some(msg) = pubsub_stream.next().await {
-            info!(
-                "Redis topic: {}",
-                msg.get_channel_name().to_string(),
-            );
+            
+            let s:String = msg.get_payload().unwrap();
+            info!("Redis topic: {} => {} ", msg.get_channel_name().to_string(),s);
             match tx_broadcast.send(PubSubEvent::Publish {
                 topic: msg.get_channel_name().to_string(),
                 message: msg.get_payload().unwrap(),
