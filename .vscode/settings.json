@@ -3,5 +3,12 @@
         "./Cargo.toml",
         "./Cargo.toml"
     ],
-    "rust-analyzer.showUnlinkedFileNotification": false
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "xml.fileAssociations": [
+        {"pattern": "./config.xsd", "systemId": "http://www.w3.org/2001/XMLSchema"}
+    ],
+    "[xml]": {
+        "editor.defaultFormatter": "redhat.vscode-xml",
+        "editor.tabSize": 2
+      },
 }

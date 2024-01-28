@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+    <xs:complexType name="StatusType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="src" type="xs:string"  />
+        <xs:attribute name="ok" type="xs:boolean"  />
+        <xs:attribute name="nok" type="xs:boolean"  />
+        <xs:attribute name="label" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="GaugeType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="src" type="xs:string"  />
+        <xs:attribute name="min" type="xs:decimal"  />
+        <xs:attribute name="max" type="xs:decimal"  />
+        <xs:attribute name="label" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="ButtonType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="dst" type="xs:string"  />
+        <xs:attribute name="pressed" type="xs:string"  />
+        <xs:attribute name="released" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="TableType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="timeout" type="xs:integer"  />
+        <xs:attribute name="src" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="SliderType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="timeout" type="xs:integer"  />
+        <xs:attribute name="unit" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+        <xs:attribute name="min" type="xs:decimal"  />
+        <xs:attribute name="max" type="xs:decimal"  />
+        <xs:attribute name="step" type="xs:decimal"  />
+    </xs:complexType>
+
+    <xs:complexType name="SwitchType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="timeout" type="xs:integer"  />
+        <xs:attribute name="on" type="xs:string"  />
+        <xs:attribute name="off" type="xs:string"  />
+        <xs:attribute name="dst" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="PlotType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="timeout" type="xs:integer"  />
+        <xs:attribute name="unit" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+        <xs:attribute name="min" type="xs:decimal"  />
+        <xs:attribute name="max" type="xs:decimal"  />
+        <xs:attribute name="msec" type="xs:integer"  />
+    </xs:complexType>
+
+    <xs:complexType name="LabelType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="ValueOutputType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="prefix" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+        <xs:attribute name="unit" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="ProgressType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="unit" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+        <xs:attribute name="min" type="xs:decimal"  />
+        <xs:attribute name="max" type="xs:decimal"  />
+    </xs:complexType>
+
+    <xs:complexType name="MapType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="image" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="CompassType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="ValueInputType">
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="label" type="xs:string"  />
+        <xs:attribute name="unit" type="xs:string"  />
+        <xs:attribute name="src" type="xs:string"  />
+    </xs:complexType>
+
+    <xs:complexType name="RowType" mixed="true">
+        <xs:sequence>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element name="Row" type="RowType" />
+                <xs:element name="Col" type="ColType" />
+                <xs:element name="Status" type="StatusType" />
+                <xs:element name="Gauge" type="GaugeType" />
+                <xs:element name="Button" type="ButtonType" />
+                <xs:element name="Table" type="TableType" />
+                <xs:element name="Slider" type="SliderType" />
+                <xs:element name="Switch" type="SwitchType" />
+                <xs:element name="Plot" type="PlotType" />
+                <xs:element name="Label" type="LabelType" />
+                <xs:element name="ValueOutput" type="ValueOutputType" />
+                <xs:element name="Progress" type="ProgressType" />
+                <xs:element name="Map" type="MapType" />
+                <xs:element name="Compass" type="CompassType" />
+                <xs:element name="ValueInput" type="ValueInputType" />
+            </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="h" type="xs:integer"  />
+    </xs:complexType>
+
+    <!-- Define other complex types as needed -->
+
+    <xs:complexType name="ColType" mixed="true">
+        <xs:sequence>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element name="Row" type="RowType" />
+                <xs:element name="Col" type="ColType" />
+                <xs:element name="Status" type="StatusType" />
+                <xs:element name="Gauge" type="GaugeType" />
+                <xs:element name="Button" type="ButtonType" />
+                <xs:element name="Table" type="TableType" />
+                <xs:element name="Slider" type="SliderType" />
+                <xs:element name="Switch" type="SwitchType" />
+                <xs:element name="Plot" type="PlotType" />
+                <xs:element name="Label" type="LabelType" />
+                <xs:element name="ValueOutput" type="ValueOutputType" />
+                <xs:element name="Progress" type="ProgressType" />
+                <xs:element name="Map" type="MapType" />
+                <xs:element name="Compass" type="CompassType" />
+                <xs:element name="ValueInput" type="ValueInputType" />
+            </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="w" type="xs:integer"  />
+    </xs:complexType>
+
+    <!-- Elements -->
+    <xs:complexType name="DashboardType">
+        <xs:sequence maxOccurs="unbounded">
+                <xs:choice>
+                    <xs:element name="Row" type="RowType" />
+                    <xs:element name="Col" type="ColType" />
+                </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="h" type="xs:integer"  />
+        <xs:attribute name="w" type="xs:integer"  />
+        <xs:attribute name="url" type="xs:anyURI"  />
+    </xs:complexType>
+
+    <!-- Define the Root Element -->
+    <xs:element name="Dashboard" type="DashboardType" />
+</xs:schema>

@@ -7,37 +7,36 @@ pub enum OrderSort {
     Count,
 }
 
-#[derive(Debug)]
-pub struct Entry {
+pub struct LastValue {
     pub topic: String,
     pub value: String,
     pub time: DateTime<Local>,
     pub count: i32,
 }
 
-impl Entry {
-    fn new(topic: String, value: String, time: DateTime<Local>) -> Entry {
-        Entry {
+impl LastValue {
+    fn new(topic: String, value: String, time: DateTime<Local>) -> LastValue {
+        LastValue {
             topic,
             value,
             time,
             count: 1,
         }
     }
-    fn update(&mut self, entry: &Entry) {
+    fn update(&mut self, entry: &LastValue) {
         self.value = entry.value.clone();
         self.time = entry.time;
         self.count += 1;
     }
 }
 
-pub struct EntryList {
-     pub entries: Vec<Entry>,
+pub struct SubTable {
+     pub entries: Vec<LastValue>,
 }
 
-impl EntryList {
-    pub fn new() -> EntryList {
-        EntryList {
+impl SubTable {
+    pub fn new() -> SubTable {
+        SubTable {
             entries: Vec::new(),
         }
     }
@@ -45,7 +44,7 @@ impl EntryList {
         let mut found = false;
         for entry in self.entries.iter_mut() {
             if entry.topic == topic {
-                entry.update(&Entry {
+                entry.update(&LastValue {
                     topic: topic.clone(),
                     value: message.clone(),
                     time: Local::now(),
@@ -56,7 +55,7 @@ impl EntryList {
             }
         }
         if !found {
-            self.entries.push(Entry {
+            self.entries.push(LastValue { 
                 topic: topic.clone(),
                 value: message.clone(),
                 time: Local::now(),
@@ -64,7 +63,7 @@ impl EntryList {
             });
         }
     }
-    pub fn get(&self, topic: &str) -> Option<&Entry> {
+    pub fn get(&self, topic: &str) -> Option<&LastValue> {
         for entry in self.entries.iter() {
             if entry.topic == topic {
                 return Some(entry);
@@ -74,7 +73,7 @@ impl EntryList {
     }
 }
 
-fn order_list(entry_list: &mut EntryList, ordering: OrderSort) {
+fn order_list(entry_list: &mut SubTable, ordering: OrderSort) {
     match ordering {
         OrderSort::Topic => {
             entry_list.entries.sort_by(|a, b| a.topic.cmp(&b.topic));
