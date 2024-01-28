@@ -45,7 +45,7 @@ impl Widget for Status {
         self.value = StatusValue::Ok;
         WidgetResult::Update
     }
-    fn draw(&self, ui: &mut Ui) -> Result<(), String> {
+    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
 
         let mut color = Color32::from_rgb(255,0,0);
         match self.value {

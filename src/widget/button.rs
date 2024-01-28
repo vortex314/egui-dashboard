@@ -23,8 +23,14 @@ impl Widget for Button {
         }
         WidgetResult::Update
     }
-    fn draw(&self, ui: &mut Ui) -> Result<(), String> {
-        ui.put(rect_border(self.rect), egui::Button::new(&self.label));
+    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
+        let mut style = egui::Style::default();
+        style.visuals.override_text_color = Some(Color32::WHITE);
+
+        ui.set_style(style);
+        ui.put(rect_border(self.rect), egui::Button::new(&self.label).fill(Color32::from_rgb(0, 0, 255)));
+
+        ui.reset_style();
         Ok(())
     }
 }

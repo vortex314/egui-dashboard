@@ -9,6 +9,7 @@ use std::time::Instant;
 pub struct Label {
     rect : Rect,
     label: String,
+    text_size: i32,
     src_topic: String,
     expire_time: Instant   ,
     expire_duration: Duration,
@@ -21,8 +22,9 @@ impl Widget for Label {
         }
         WidgetResult::Update
     }
-    fn draw(&self, ui: &mut Ui) -> Result<(), String> {
-        ui.label(self.label.clone());
+    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
+
+        ui.label(egui::RichText::new(self.label.clone()).size(self.text_size as f32).color(Color32::BLACK));
         Ok(())
     }
 }
@@ -33,6 +35,7 @@ impl Label {
         Self {
             rect,
             label:config.label.as_ref().unwrap_or(&config.name).clone(),
+            text_size:config.text_size.unwrap_or(20),
             src_topic:config.src.as_ref().unwrap_or(&String::from("")).clone(),
             expire_time : Instant::now()+expire_duration,
             expire_duration,

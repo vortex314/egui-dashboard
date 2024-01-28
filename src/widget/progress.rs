@@ -26,7 +26,7 @@ impl Widget for Progress {
         }
         WidgetResult::Update
     }
-    fn draw(&self, ui: &mut Ui) -> Result<(), String> {
+    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let mut value = 3.5f32;
         let s = format!("{}{}", value, self.unit);
         let rect = rect_border(self.rect);

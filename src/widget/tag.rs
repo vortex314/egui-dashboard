@@ -16,6 +16,7 @@ pub struct Tag {
     pub label: Option<String>,
     pub height: Option<i32>,
     pub width: Option<i32>,
+    pub text_size: Option<i32>,
     pub msec: Option<i32>,
     pub min: Option<f64>,
     pub max: Option<f64>,
@@ -99,6 +100,9 @@ fn get_tag(element: &Element) -> Option<Tag> {
             "off" => {
                 tag.off = Some(String::from(attr.1));
             },
+            "ts" => {
+                tag.text_size = Some(FromStr::from_str(attr.1).unwrap());
+            },
             _ => { warn!("Unknown attribute: {}", attr.0);},
         }
     });
@@ -117,6 +121,7 @@ impl Tag {
             label: None,
             height: None,
             width: None,
+            text_size: None,
             msec: None,
             min: None,
             max: None,

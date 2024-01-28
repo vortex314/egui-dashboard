@@ -15,6 +15,7 @@ pub struct Slider {
     min: f64,
     max: f64,
     unit: String,
+    value: f32,
 }
 
 impl Widget for Slider {
@@ -24,13 +25,12 @@ impl Widget for Slider {
         }
         WidgetResult::Update
     }
-    fn draw(&self, ui: &mut Ui) -> Result<(), String> {
-        let mut value = 0.0f32;
+    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let mut style = egui::Style::default();
         style.spacing.slider_width = self.rect.width();
         ui.set_style(style);
         ui.add(
-            egui::Slider::new(&mut value, self.min as f32 ..=self.max as f32).text(self.label.clone()),
+            egui::Slider::new(&mut self.value, self.min as f32 ..=self.max as f32).text(self.label.clone()),
         );
 
         Ok(())
@@ -49,6 +49,7 @@ impl Slider {
             min: config.min.unwrap_or(0.0),
             max: config.max.unwrap_or(100.0),
             unit: config.unit.as_ref().unwrap_or(&String::from("")).clone(),
+            value: 0.0,
         }
     }
 }

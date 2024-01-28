@@ -26,7 +26,7 @@ impl Widget for Gauge {
         self.value = 0.0;
         WidgetResult::Update
     }
-    fn draw(&self, ui: &mut Ui) -> Result<(), String> {
+    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let mut value = 70.736 as f64;
         let mut range = self.min..=self.max;
         let square = self.rect.width().min(self.rect.height());

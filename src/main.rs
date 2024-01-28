@@ -57,10 +57,10 @@ impl DashboardApp {
     }
 }
 
-fn show_config(ui: &mut egui::Ui, widgets: &Vec<Box<dyn Widget>>) {
+fn show_config(ui: &mut egui::Ui, widgets: &mut Vec<Box<dyn Widget>>) {
     info!("Drawing widgets [{}]", widgets.len());
     let mut rect = egui::Rect::EVERYTHING;
-    widgets.iter().for_each(|widget| {
+    widgets.iter_mut().for_each(|widget| {
         let _r = widget.draw(ui);
     });
 }
@@ -167,7 +167,7 @@ impl eframe::App for DashboardApp {
             style.visuals.override_text_color = Some(Color32::from_rgb(255, 255, 255));
             ui.set_style(style);*/
             let rect = egui::Rect::EVERYTHING;
-            show_config(ui, &self.widgets);
+            show_config(ui, &mut self.widgets);
         });
         for widget in self.widgets.iter_mut() {
             widget.on_tick();
