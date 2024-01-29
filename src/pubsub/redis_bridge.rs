@@ -1,11 +1,11 @@
 extern crate log;
 use log::{debug, error, info, trace, warn};
+use redis::RedisResult;
 use serde_yaml::Value;
 
-use redis::AsyncCommands;
-use tokio::select;
 use std::fmt::Error;
 use std::thread::{self, Thread};
+use tokio::select;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::time::sleep;
@@ -15,7 +15,7 @@ use tokio_stream::StreamExt;
 
 use crate::pubsub::PubSubEvent;
 use crate::PubSubCmd;
-
+/* 
 async fn redis_publish_received(url: &str, mut tx_publish_received: Sender<PubSubEvent>) {
     info!("Redis config {:?} ", url);
     loop {
@@ -70,14 +70,13 @@ async fn redis_publish_received(url: &str, mut tx_publish_received: Sender<PubSu
     }
 }
 
-async fn redis_cmd_received(url:&str,mut rx_redis_cmd: Receiver<PubSubCmd>) {
+async fn redis_cmd_received(url: &str, mut rx_redis_cmd: Receiver<PubSubCmd>) {
     info!("Redis config {:?} ", url);
     loop {
         let url = String::from(url);
         let client = redis::Client::open(url.clone()).unwrap();
         info!("Redis connecting {} ...  ", url);
         let mut publish_conn = client.get_multiplexed_async_connection().await;
-
 
         match publish_conn {
             Ok(_) => {}
@@ -117,6 +116,18 @@ async fn redis_cmd_received(url:&str,mut rx_redis_cmd: Receiver<PubSubCmd>) {
             }
         }
     }
+}*/
+
+async fn rxd_publish(url: &str, events: Sender<PubSubEvent>) -> RedisResult<()>{
+    let client = redis::Client::open(url)?;
+    let mut con = client.get_connection()?;
+    let mut pubsub = con.as_pubsub();
+    let _ = pubsub.psubscribe("*");
+    loop {
+        let msg = pubsub.get_message()?;
+        let payload : String = msg.get_payload()?;
+        let _r = events.send(PubSubEvent::Publish { topic: msg.get_channel_name().to_string(), message: payload } ).await;
+    }
 }
 
 pub async fn redis(
@@ -124,9 +135,7 @@ pub async fn redis(
     tx_publish_received: Sender<PubSubEvent>,
     rx_cmd: Receiver<PubSubCmd>,
 ) -> Result<(), Error> {
-    select!{
-        _ = redis_publish_received(url,tx_publish_received) => {}
-        _ = redis_cmd_received(url,rx_cmd) => {}
-    }
+    let _r = rxd_publish(url, tx_publish_received).await;
+
     Ok(())
 }
