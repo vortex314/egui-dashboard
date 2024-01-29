@@ -22,10 +22,10 @@ impl Widget for Label {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
+        self.label = payload.to_string();
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
-        info!("Label {:?}",self);
         ui.put(
             self.rect,
             egui::widgets::Label::new(

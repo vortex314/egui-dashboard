@@ -67,10 +67,10 @@ async fn main() {
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
     info!("Starting up. Reading config file {}.", &args.config);
-    let (mut tx_publish, mut rx_publish) = broadcast::channel::<PubSubEvent>(16);
+    let (mut tx_publish, mut rx_publish) = channel::<PubSubEvent>(16);
     let (mut tx_redis_cmd, mut rx_redis_cmd) = channel::<PubSubCmd>(16);
     tokio::spawn(async move {
-        let _ = redis("redis://pcthink.local:6379", tx_publish).await;
+        let _ = redis("redis://limero.ddns.net:6379", tx_publish,rx_redis_cmd).await;
     });
 
     let mut config = Box::new(load_xml_file(&args.config).unwrap());
@@ -112,22 +112,24 @@ impl eframe::App for DashboardApp {
         let x = self.receiver_events.try_recv();
         match x {
             Ok(m) => match m {
-                PubSubEvent::Publish(topic, payload) => {
+                PubSubEvent::Publish{topic, message} => {
                     for widget in self.widgets.iter_mut() {
-                        widget.on_message(topic.as_str(), payload.as_str());
+                        widget.on_message(topic.as_str(), message.as_str());
                     }
+                    ctx.request_repaint();
                 }
+                
             },
             Err(e) => {
-                warn!("Error in recv : {}", e);
+                // warn!("Error in recv : {}", e);
             }
         }
-        // ctx.request_repaint();
+        ctx.request_repaint_after(Duration::from_millis(1000));
     }
 }
 
 fn show_dashboard(ui: &mut egui::Ui, widgets: &mut Vec<Box<dyn Widget>>) {
-    info!("Drawing widgets [{}]", widgets.len());
+   // info!("Drawing widgets [{}]", widgets.len());
     let mut rect = egui::Rect::EVERYTHING;
     widgets.iter_mut().for_each(|widget| {
         let _r = widget.draw(ui);

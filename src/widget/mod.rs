@@ -9,6 +9,8 @@ pub mod slider;
 
 use tag::Tag;
 
+use crate::PubSubCmd;
+
 pub enum WidgetResult {
     Update,
     NoEffect,

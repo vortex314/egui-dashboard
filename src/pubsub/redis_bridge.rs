@@ -3,20 +3,20 @@ use log::{debug, error, info, trace, warn};
 use serde_yaml::Value;
 
 use redis::AsyncCommands;
+use tokio::select;
 use std::fmt::Error;
 use std::thread::{self, Thread};
 use tokio::sync::broadcast;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::time::sleep;
 use tokio::time::{self, Duration};
 use tokio::{sync::mpsc, task};
 use tokio_stream::StreamExt;
 
 use crate::pubsub::PubSubEvent;
+use crate::PubSubCmd;
 
-pub async fn redis(
-    url:&str,
-    tx_broadcast: broadcast::Sender<PubSubEvent>,
-) -> Result<(), Error> {
+async fn redis_publish_received(url: &str, mut tx_publish_received: Sender<PubSubEvent>) {
     info!("Redis config {:?} ", url);
     loop {
         let url = String::from(url);
@@ -33,43 +33,100 @@ pub async fn redis(
         }
         let mut pubsub = connection.unwrap().into_pubsub();
         //    let redis_cmd_channel = connection.into_monitor();
-        pubsub.psubscribe("*").await.unwrap();
-
-        let mut pubsub_stream = pubsub.into_on_message();
-        /*   tokio::spawn(async move {
-            while let Some(cmd) = rx_cmd.recv().await {
-                match cmd {
-                    RedisCmd::Stop => {
-                        info!("RedisCmd::Stop");
-                        return;
-                    }
-                    RedisCmd::Publish { topic, message } => {
-                        info!("RedisCmd::Publish");
-                        let _ : () = redis::cmd("PUBLISH").arg(topic).arg(message).query_async(&mut pubsub).await.unwrap();
-                    }
-                    RedisCmd::Subscribe { topic } => {
-                        info!("RedisCmd::Subscribe");
-                        let _ : () = redis::cmd("PSUBSCRIBE").arg(topic).query_async(&mut pubsub).await.unwrap();
-                    }
-                }
+        let r = pubsub.psubscribe("*").await;
+        match r {
+            Ok(()) => {
+                info!("Redis psubscribe *");
+            }
+            Err(e) => {
+                error!("Error psubscribe: {}", e);
+                sleep(Duration::from_secs(1)).await;
+                continue;
             }
         }
-        );*/
+
+        let mut pubsub_stream = pubsub.into_on_message();
 
         while let Some(msg) = pubsub_stream.next().await {
-            
-            let s:String = msg.get_payload().unwrap();
-            info!("Redis topic: {} => {} ", msg.get_channel_name().to_string(),s);
-            match tx_broadcast.send(PubSubEvent::Publish {
-                topic: msg.get_channel_name().to_string(),
-                message: msg.get_payload().unwrap(),
-            }) {
+            let s: String = msg.get_payload().unwrap();
+            info!(
+                "Redis topic: {} => {} ",
+                msg.get_channel_name().to_string(),
+                s
+            );
+            match tx_publish_received
+                .send(PubSubEvent::Publish {
+                    topic: msg.get_channel_name().to_string(),
+                    message: msg.get_payload().unwrap(),
+                })
+                .await
+            {
                 Ok(_) => {}
                 Err(e) => {
-                    error!("|{:>20}| error: {}", thread::current().name().unwrap(), e);
-                    break;
+                    error!("Error sending: {}", e);
                 }
             }
         }
     }
+}
+
+async fn redis_cmd_received(url:&str,mut rx_redis_cmd: Receiver<PubSubCmd>) {
+    info!("Redis config {:?} ", url);
+    loop {
+        let url = String::from(url);
+        let client = redis::Client::open(url.clone()).unwrap();
+        info!("Redis connecting {} ...  ", url);
+        let mut publish_conn = client.get_multiplexed_async_connection().await;
+
+
+        match publish_conn {
+            Ok(_) => {}
+            Err(e) => {
+                error!("Error connecting: {}", e);
+                sleep(Duration::from_secs(1)).await;
+                continue;
+            }
+        }
+        //    let redis_cmd_channel = connection.into_monitor();
+
+        while let Some(cmd) = rx_redis_cmd.recv().await {
+            info!("PubSubCmd {:?}", cmd);
+            match cmd {
+                PubSubCmd::Unsubscribe { pattern } => {
+                    let _: () = redis::cmd("PUNSUBSCRIBE")
+                        .arg(pattern)
+                        .query_async(&mut publish_conn)
+                        .await
+                        .unwrap();
+                }
+                PubSubCmd::Publish { topic, message } => {
+                    let _: () = redis::cmd("PUBLISH")
+                        .arg(topic)
+                        .arg(message)
+                        .query_async(&mut publish_conn)
+                        .await
+                        .unwrap();
+                }
+                PubSubCmd::Subscribe { pattern } => {
+                    let _: () = redis::cmd("PSUBSCRIBE")
+                        .arg(pattern)
+                        .query_async(&mut publish_conn)
+                        .await
+                        .unwrap();
+                }
+            }
+        }
+    }
+}
+
+pub async fn redis(
+    url: &str,
+    tx_publish_received: Sender<PubSubEvent>,
+    rx_cmd: Receiver<PubSubCmd>,
+) -> Result<(), Error> {
+    select!{
+        _ = redis_publish_received(url,tx_publish_received) => {}
+        _ = redis_cmd_received(url,rx_cmd) => {}
+    }
+    Ok(())
 }

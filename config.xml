@@ -1,7 +1,7 @@
 <Dashboard h="768" w="1024" url="https://pcthink.local:353/ws"
     xmlns="config">
     <Row h="40">
-        <Label label="Dashboard LIMERO " w="400" text_size="30"/>
+        <Label label="Dashboard LIMERO " w="400" text_size="30" src="src/ws2redis/system/alive"/>
     </Row>
     <Row h="40">
         <Status w="100" src="src/ws2redis/system/alive" ok="true" nok="false" label="ws2redis" />
