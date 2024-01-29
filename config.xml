@@ -1,7 +1,7 @@
 <Dashboard h="768" w="1024" url="https://pcthink.local:353/ws"
     xmlns="config">
     <Row h="40">
-        <Label label="Dashboard LIMERO " h="40" size="30"/>
+        <Label label="Dashboard LIMERO " w="400" text_size="30"/>
     </Row>
     <Row h="40">
         <Status w="100" src="src/ws2redis/system/alive" ok="true" nok="false" label="ws2redis" />
@@ -23,7 +23,7 @@
         <Slider label="Voltage" w="500" unit="V" dst="dst/esp32/sys/voltage" min="0.0" max="5.0" step="0.1" />
         <Switch label="Power" w="500" dst="dst/esp32/sys/power" on="on" off="off" />
         <Plot label="Voltage" w="500" unit="V" src="src/esp32/sys/voltage" min="0.0" max="5.0" msec="10000" />
-        <Label label="Just a label text" h="40" size="30"/>
+        <Label label="Just a label text" h="40" text_size="10"/>
         <ValueOutput label="Voltage" w="500" unit="V" prefix="$" src="src/esp32/sys/voltage" />
         <Progress label="Voltage" unit="V" w="500" h="20" src="src/esp32/sys/voltage" min="0.0" max="5.0" />
         <Map label="Location" image="img/map.png" w="500" src="src/esp32/sys/location" />

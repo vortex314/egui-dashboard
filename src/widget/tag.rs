@@ -100,7 +100,7 @@ fn get_tag(element: &Element) -> Option<Tag> {
             "off" => {
                 tag.off = Some(String::from(attr.1));
             },
-            "ts" => {
+            "text_size" => {
                 tag.text_size = Some(FromStr::from_str(attr.1).unwrap());
             },
             _ => { warn!("Unknown attribute: {}", attr.0);},

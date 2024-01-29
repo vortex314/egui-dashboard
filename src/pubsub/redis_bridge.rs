@@ -14,16 +14,12 @@ use tokio_stream::StreamExt;
 use crate::pubsub::PubSubEvent;
 
 pub async fn redis(
-    config: Value,
+    url:&str,
     tx_broadcast: broadcast::Sender<PubSubEvent>,
 ) -> Result<(), Error> {
-    info!("Redis config {:?} ", config);
+    info!("Redis config {:?} ", url);
     loop {
-        let url = format!(
-            "redis://{}:{}/",
-            config["host"].as_str().or(Some("localhost")).unwrap(),
-            config["port"].as_str().or(Some("6379")).unwrap()
-        );
+        let url = String::from(url);
         let client = redis::Client::open(url.clone()).unwrap();
         info!("Redis connecting {} ...  ", url);
         let connection = client.get_async_connection().await;
