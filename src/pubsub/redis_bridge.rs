@@ -38,8 +38,10 @@ pub async fn redis(
 
     let client = RedisClient::new(config, None, None, Some(reconnect_policy));
     let _r = client.connect().await.unwrap();
+    info!("redis connected ");
     let patterns = MultipleStrings::from(vec!["*"]);
     client.psubscribe(patterns).await.unwrap();
+    info!("redis subscribed ");
     client.on_message(move |msg| {
         info!(
             "Redis topic: {} => {:?} ",

@@ -74,7 +74,6 @@ async fn main() {
     });
 
     let mut config = Box::new(load_xml_file(&args.config).unwrap());
-    info!("Config: {:?}", config);
     let widgets = load_dashboard(&mut config);
     let mut app = DashboardApp::new(widgets, rx_publish);
 

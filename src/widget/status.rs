@@ -47,12 +47,11 @@ impl Widget for Status {
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
 
-        let mut color = Color32::from_rgb(255,0,0);
-        match self.value {
-            StatusValue::Ok => color = Color32::from_rgb(0,255,0),
-            StatusValue::Failed => color = Color32::from_rgb(255,0,0),
-            StatusValue::Timeout => color = Color32::from_rgb(180,180,180),
-        }
+        let mut color = match self.value {
+            StatusValue::Ok => Color32::from_rgb(0,255,0),
+            StatusValue::Failed => Color32::from_rgb(255,0,0),
+            StatusValue::Timeout => Color32::from_rgb(180,180,180),
+        };
         let mut painter = ui.painter();
         let rect = rect_border(self.rect);
         painter.rect_filled(rect, 0.0, color);
