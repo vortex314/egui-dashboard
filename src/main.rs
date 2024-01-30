@@ -70,7 +70,7 @@ async fn main() {
     let (mut tx_publish, mut rx_publish) = channel::<PubSubEvent>(16);
     let (mut tx_redis_cmd, mut rx_redis_cmd) = channel::<PubSubCmd>(16);
     tokio::spawn(async move {
-        let _ = redis("redis://limero.ddns.net:6379", tx_publish,rx_redis_cmd).await;
+        let _ = redis("redis://limero.ddns.net:6379", tx_publish,&mut rx_redis_cmd).await;
     });
 
     let mut config = Box::new(load_xml_file(&args.config).unwrap());
