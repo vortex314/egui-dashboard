@@ -1,7 +1,7 @@
 extern crate log;
 use fred::clients::RedisClient;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
-use fred::types::{MultipleStrings, ReconnectPolicy, RedisConfig, ServerConfig};
+use fred::types::{Blocking, MultipleStrings, ReconnectPolicy, RedisConfig, RespVersion, ServerConfig, TracingConfig};
 use log::{debug, error, info, trace, warn};
 use serde_yaml::Value;
 
@@ -28,15 +28,22 @@ pub async fn redis(
     let mut config = RedisConfig::default();
     let reconnect_policy = ReconnectPolicy::Exponential {
         attempts: 10,
-        max_attempts: 0,
+        max_attempts: 10,
         min_delay: 1,
         max_delay: 1000,
         mult: 2,
         jitter: 3,
     };
     config.server = ServerConfig::new_centralized("limero.ddns.net", 6379);
+    config.tracing = TracingConfig::default();
+    config.tracing.enabled=true;
+    config.version = RespVersion::RESP3;
+    config.blocking = Blocking::default();
+
 
     let client = RedisClient::new(config, None, None, Some(reconnect_policy));
+    let task  = client.init().await.unwrap();
+    info!("redis connecting ... ");
     let _r = client.connect().await.unwrap();
     info!("redis connected ");
     let patterns = MultipleStrings::from(vec!["*"]);

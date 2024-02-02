@@ -15,7 +15,7 @@ simplelog = "0.12.1" # for logging
 env_logger = "0.11.0"
 # redis = { git = "https://github.com/redis-rs/redis-rs", branch = "resp3",features = ["tokio-comp"] }
 # redis = { version="0.24.0" ,features=[]} 
-fred = { version="8.0.1"}
+fred = { version="8.0.1",features=["full-tracing"]}
 chrono = "0.4.19" # for time
 mqtt-async-client = "0.3.1" # for mqtt
 tokio = { version = "1", features = ["full"] }

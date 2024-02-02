@@ -25,6 +25,7 @@ use std::thread;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
+use tokio::runtime::Builder;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::task;
@@ -61,7 +62,7 @@ struct Args {
     config: String,
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 1)]
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() {
     let args = Args::parse();
     env::set_var("RUST_LOG", "info");
@@ -69,16 +70,25 @@ async fn main() {
     info!("Starting up. Reading config file {}.", &args.config);
     let (mut tx_publish, mut rx_publish) = channel::<PubSubEvent>(16);
     let (mut tx_redis_cmd, mut rx_redis_cmd) = channel::<PubSubCmd>(16);
-    tokio::spawn(async move {
-        let _ = redis("redis://limero.ddns.net:6379", tx_publish,&mut rx_redis_cmd).await;
-    });
 
     let mut config = Box::new(load_xml_file(&args.config).unwrap());
     let widgets = load_dashboard(&mut config);
     let mut app = DashboardApp::new(widgets, rx_publish);
+    let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
+    // let _ = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
 
-    let native_options = eframe::NativeOptions::default();
-    let _ = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
+    let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+
+    let r = redis(
+        "redis://limero.ddns.net:6379",
+        tx_publish,
+        &mut rx_redis_cmd,
+    )
+    .await
+    .unwrap();
+
+    tokio::time::sleep(Duration::from_millis(1000000)).await;
+    info!("Exiting.");
 }
 
 pub struct DashboardApp {
@@ -111,13 +121,12 @@ impl eframe::App for DashboardApp {
         let x = self.receiver_events.try_recv();
         match x {
             Ok(m) => match m {
-                PubSubEvent::Publish{topic, message} => {
+                PubSubEvent::Publish { topic, message } => {
                     for widget in self.widgets.iter_mut() {
                         widget.on_message(topic.as_str(), message.as_str());
                     }
                     ctx.request_repaint();
                 }
-                
             },
             Err(e) => {
                 // warn!("Error in recv : {}", e);
@@ -128,7 +137,7 @@ impl eframe::App for DashboardApp {
 }
 
 fn show_dashboard(ui: &mut egui::Ui, widgets: &mut Vec<Box<dyn Widget>>) {
-   // info!("Drawing widgets [{}]", widgets.len());
+    // info!("Drawing widgets [{}]", widgets.len());
     let mut rect = egui::Rect::EVERYTHING;
     widgets.iter_mut().for_each(|widget| {
         let _r = widget.draw(ui);

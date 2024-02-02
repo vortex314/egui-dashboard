@@ -14,10 +14,10 @@ pub fn init() {
             let name = thread_name.name().unwrap_or("unknown");
             writeln!(
                 buf,
-                "[{}] {:10.10} | {:10.10}:{:3}| {} {}",
+                "[{}] {:10.10} | {:12.12}:{:3}| {} {}",
                 chrono::Local::now().format("%H:%M:%S.%3f"),
                 name,
-                record.file().unwrap_or("unknown"),
+                record.file().unwrap_or("unknown").rsplit_once('/').unwrap().1,
                 record.line().unwrap_or(0),
                 record.level(),
                 record.args()
