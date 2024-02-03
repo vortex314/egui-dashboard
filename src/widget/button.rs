@@ -31,7 +31,7 @@ impl Widget for Button {
 
         ui.set_style(style);
         if ui.put(rect_border(self.rect), egui::Button::new(&self.label).fill(Color32::from_rgb(0, 0, 255))).clicked() {
-            self.cmd_sender.try_send(PubSubCmd::Publish { topic: self.dst_topic.clone(), message: self.pressed.clone() });
+            let _ = self.cmd_sender.try_send(PubSubCmd::Publish { topic: self.dst_topic.clone(), message: self.pressed.clone() });
         }
 
         ui.reset_style();

@@ -1,7 +1,7 @@
 <Dashboard h="768" w="1024" url="https://pcthink.local:353/ws"
     xmlns="config">
     <Row h="40">
-        <Status label="Dashboard LIMERO " w="1024" text_size="50" src="src/ws2redis/system/alive"/>
+        <Status label="Dashboard LIMERO " w="1024" text_size="40" src="src/ws2redis/system/alive"/>
     </Row>
     <Row h="40">
         <Status w="100" src="src/ws2redis/system/alive" ok="true" nok="false" label="ws2redis" />
@@ -18,11 +18,11 @@
         <Button w="100" label="ESP32" dst="src/esp32/sys/alive" pressed="true" released="false" />
         <Button w="200" label="heap" dst="src/esp32/sys/heap" pressed="25000.0" released="off" />
     </Row>
-    <Col h="500">
+    <Col w="1024">
         <Table h="100" w="250" src="src/esp32/*" label="ESP32" timeout="1000" />
-        <Slider label="Voltage" w="500" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
+        <Slider label="Voltage" w="600" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
         <Switch label="Power" w="500" dst="dst/esp32/sys/power" on="on" off="off" />
-        <Plot label="Voltage" w="500" unit="V" src="src/esp32/sys/voltage" min="0.0" max="5.0" timeout="10000" samples="1000"/>
+        <Plot label="Voltage" w="500" h="200" unit="V" src="src/esp32/sys/voltage" min="0.0" max="5.0" timeout="10000" samples="1000"/>
         <Label label="Just a label text" h="40" text_size="10"/>
         <ValueOutput label="Voltage" w="500" unit="V" prefix="$" src="src/esp32/sys/voltage" />
         <Progress label="Voltage" unit="V" w="500" h="30" src="src/esp32/sys/heap" min="0.0" max="50000.0" />

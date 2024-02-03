@@ -150,7 +150,7 @@ impl eframe::App for DashboardApp {
                 // warn!("Error in recv : {}", e);
             }
         }
-        //      ctx.request_repaint_after(Duration::from_millis(1000));
+        ctx.request_repaint_after(Duration::from_millis(1000)); // updqte timed out widgets
     }
 }
 

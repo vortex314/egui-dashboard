@@ -4,6 +4,7 @@ use crate::widget::Widget;
 use crate::widget::WidgetResult;
 use egui::containers::Frame;
 use egui::*;
+use egui_plot::PlotPoints;
 use log::info;
 use std::time::Duration;
 use std::time::Instant;
@@ -37,16 +38,22 @@ impl Widget for Plot {
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let s = format!("{} {}", self.value, self.unit);
         let rect = rect_border(self.rect);
-        ui.put(
-            rect_border(rect),
-            egui::ProgressBar::new(self.fraction(self.value))
-                .fill(Color32::BLUE)
-                .rounding(Rounding::ZERO)
-                .desired_height(rect.height())
-                .desired_width(rect.width())
-                .text(s),
-        );
-
+        let n = 128;
+        let line_points: PlotPoints = (0..=n)
+            .map(|i| {
+                use std::f64::consts::TAU;
+                let x = egui::remap(i as f64, 0.0..=n as f64, -TAU..=TAU);
+                [x, x.sin()]
+            })
+            .collect();
+        let line = egui_plot::Line::new(line_points);
+        let pl = egui_plot::Plot::new("example_plot")
+            .height(rect.height())
+            .width(rect.width())
+            .show_axes(true)
+            .show_grid(true)
+            .data_aspect(1.0)
+            .show(ui, |plot_ui| {plot_ui.line(line);}).response;
         Ok(())
     }
 }
