@@ -24,6 +24,7 @@ use std::sync::*;
 use std::thread;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+use widget::WidgetResult;
 
 use tokio::runtime::Builder;
 use tokio::sync::broadcast;
@@ -46,6 +47,8 @@ use widget::slider::Slider;
 use widget::status::Status;
 use widget::tag::load_xml_file;
 use widget::tag::Tag;
+use widget::table::Table;
+use widget::plot::Plot;
 use widget::Widget;
 
 use clap::Parser;
@@ -62,32 +65,36 @@ struct Args {
     config: String,
 }
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
-async fn main() {
+//#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+fn main() {
     let args = Args::parse();
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
     info!("Starting up. Reading config file {}.", &args.config);
-    let (mut tx_publish, mut rx_publish) = channel::<PubSubEvent>(16);
-    let (mut tx_redis_cmd, mut rx_redis_cmd) = channel::<PubSubCmd>(16);
+    let (mut publish_sender, mut publish_receiver) = channel::<PubSubEvent>(16);
+    let (mut cmd_sender, mut cmd_receiver) = channel::<PubSubCmd>(16);
 
     let mut config = Box::new(load_xml_file(&args.config).unwrap());
-    let widgets = load_dashboard(&mut config);
-    let mut app = DashboardApp::new(widgets, rx_publish);
+    let widgets = load_dashboard(&mut config, cmd_sender);
+    let mut app = DashboardApp::new(widgets, publish_receiver);
     let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
-    // let _ = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
 
-    let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+    thread::spawn(move || {
+        let result = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                redis(
+                    "redis://limero.ddns.net:6379",
+                    publish_sender,
+                    &mut cmd_receiver,
+                )
+                .await
+            });
+    });
 
-    let r = redis(
-        "redis://limero.ddns.net:6379",
-        tx_publish,
-        &mut rx_redis_cmd,
-    )
-    .await
-    .unwrap();
-
-    tokio::time::sleep(Duration::from_millis(1000000)).await;
+    let _ = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
     info!("Exiting.");
 }
 
@@ -115,24 +122,35 @@ impl eframe::App for DashboardApp {
             let rect = egui::Rect::EVERYTHING;
             show_dashboard(ui, &mut self.widgets);
         });
+        let mut repaint = false;
         for widget in self.widgets.iter_mut() {
-            widget.on_tick();
+            if widget.on_tick() == WidgetResult::Update {
+                repaint = true
+            };
         }
+        if repaint {
+            ctx.request_repaint();
+            repaint=false;
+        };
         let x = self.receiver_events.try_recv();
         match x {
             Ok(m) => match m {
                 PubSubEvent::Publish { topic, message } => {
                     for widget in self.widgets.iter_mut() {
-                        widget.on_message(topic.as_str(), message.as_str());
+                        if widget.on_message(topic.as_str(), message.as_str())
+                            == WidgetResult::Update
+                        {
+                            repaint = true
+                        };
                     }
-                    ctx.request_repaint();
+                    if repaint { ctx.request_repaint()};
                 }
             },
             Err(e) => {
                 // warn!("Error in recv : {}", e);
             }
         }
-        ctx.request_repaint_after(Duration::from_millis(1000));
+        //      ctx.request_repaint_after(Duration::from_millis(1000));
     }
 }
 
@@ -144,7 +162,7 @@ fn show_dashboard(ui: &mut egui::Ui, widgets: &mut Vec<Box<dyn Widget>>) {
     });
 }
 
-fn load_dashboard(cfg: &Tag) -> Vec<Box<dyn Widget>> {
+fn load_dashboard(cfg: &Tag, cmd_sender: Sender<PubSubCmd>) -> Vec<Box<dyn Widget>> {
     if cfg.name != "Dashboard" {
         warn!("Invalid config file. Missing Dashboard tag.");
         return Vec::new();
@@ -157,7 +175,7 @@ fn load_dashboard(cfg: &Tag) -> Vec<Box<dyn Widget>> {
     rect.max.y = cfg.height.unwrap_or(769) as f32;
     cfg.children.iter().for_each(|child| {
         info!("Loading widget {}", child.name);
-        let mut sub_widgets = load_widgets(rect, child);
+        let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
         widgets.append(&mut sub_widgets);
         if child.width.is_some() {
             rect.min.x += child.width.unwrap() as f32;
@@ -169,7 +187,11 @@ fn load_dashboard(cfg: &Tag) -> Vec<Box<dyn Widget>> {
     widgets
 }
 
-fn load_widgets(rect: egui::Rect, cfg: &Tag) -> Vec<Box<dyn Widget>> {
+fn load_widgets(
+    rect: egui::Rect,
+    cfg: &Tag,
+    cmd_sender: Sender<PubSubCmd>,
+) -> Vec<Box<dyn Widget>> {
     let mut widgets: Vec<Box<dyn Widget>> = Vec::new();
     let mut rect = rect;
 
@@ -189,7 +211,7 @@ fn load_widgets(rect: egui::Rect, cfg: &Tag) -> Vec<Box<dyn Widget>> {
     match cfg.name.as_str() {
         "Row" => {
             cfg.children.iter().for_each(|child| {
-                let mut sub_widgets = load_widgets(rect, child);
+                let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
                 widgets.append(&mut sub_widgets);
                 if child.width.is_some() {
                     rect.min.x += child.width.unwrap() as f32;
@@ -198,7 +220,7 @@ fn load_widgets(rect: egui::Rect, cfg: &Tag) -> Vec<Box<dyn Widget>> {
         }
         "Col" => {
             cfg.children.iter().for_each(|child| {
-                let mut sub_widgets = load_widgets(rect, child);
+                let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
                 widgets.append(&mut sub_widgets);
                 if child.height.is_some() {
                     rect.min.y += child.height.unwrap() as f32;
@@ -222,14 +244,17 @@ fn load_widgets(rect: egui::Rect, cfg: &Tag) -> Vec<Box<dyn Widget>> {
             widgets.push(Box::new(widget));
         }
         "Button" => {
-            let widget = Button::new(rect, cfg);
+            let widget = Button::new(rect, cfg, cmd_sender);
             widgets.push(Box::new(widget));
         }
         "Slider" => {
-            let widget = Slider::new(rect, cfg);
+            let widget = Slider::new(rect, cfg, cmd_sender);
             widgets.push(Box::new(widget));
         }
-
+        "Table" => {
+            let widget = Table::new(rect, cfg);
+            widgets.push(Box::new(widget));
+        }
         _ => {
             warn!("Unknown widget: {}", cfg.name);
         }

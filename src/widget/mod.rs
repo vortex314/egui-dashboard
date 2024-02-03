@@ -6,11 +6,14 @@ pub mod label;
 pub mod progress;
 pub mod button;
 pub mod slider;
+pub mod table;
+pub mod plot;
 
 use tag::Tag;
 
 use crate::PubSubCmd;
 
+#[derive(PartialEq)]
 pub enum WidgetResult {
     Update,
     NoEffect,

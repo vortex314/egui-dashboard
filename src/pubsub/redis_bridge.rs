@@ -1,5 +1,6 @@
 extern crate log;
 use fred::clients::RedisClient;
+use fred::error::RedisError;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
 use fred::types::{Blocking, MultipleStrings, ReconnectPolicy, RedisConfig, RespVersion, ServerConfig, TracingConfig};
 use log::{debug, error, info, trace, warn};
@@ -21,8 +22,8 @@ use fred::*;
 
 pub async fn redis(
     url: &str,
-    tx_publish_received: Sender<PubSubEvent>,
-    rx_cmd: &mut Receiver<PubSubCmd>,
+    publish_sender: Sender<PubSubEvent>,
+    cmd_receiver: &mut Receiver<PubSubCmd>,
 ) -> Result<(), Error> {
     info!("Redis config {:?} ", url);
     let mut config = RedisConfig::default();
@@ -42,28 +43,30 @@ pub async fn redis(
 
 
     let client = RedisClient::new(config, None, None, Some(reconnect_policy));
-    let task  = client.init().await.unwrap();
+    let client_clone = client.clone();
+
+   // let task  = client.init().await.unwrap();
     info!("redis connecting ... ");
-    let _r = client.connect().await.unwrap();
+    tokio::spawn( async move{ let _r = client_clone.connect();});
     info!("redis connected ");
     let patterns = MultipleStrings::from(vec!["*"]);
     client.psubscribe(patterns).await.unwrap();
     info!("redis subscribed ");
     client.on_message(move |msg| {
         info!(
-            "Redis topic: {} => {:?} ",
+            "Publish received topic: {} => {:?} ",
             msg.channel,
             msg.value.as_string()
         );
-        let _r = tx_publish_received.send(PubSubEvent::Publish {
+        let _ = publish_sender.try_send(PubSubEvent::Publish {
             topic: msg.channel.to_string(),
             message: msg.value.as_string().unwrap(),
-        });
+        }).unwrap();
         Ok(())
     });
     loop {
         select! {
-            cmd = rx_cmd.recv() => {
+            cmd = cmd_receiver.recv() => {
                 match cmd {
                     Some(cmd) => {
                         info!("PubSubCmd {:?}", cmd);
@@ -72,7 +75,7 @@ pub async fn redis(
                                 let _r = client.punsubscribe(pattern).await;
                             }
                             PubSubCmd::Publish { topic, message } => {
-                               // let _r = client.publish(topic, message).await;
+                               let r:Result<String,RedisError> = client.publish(topic, message).await;
                             }
                             PubSubCmd::Subscribe { pattern } => {
                                 let _r = client.psubscribe(pattern).await;

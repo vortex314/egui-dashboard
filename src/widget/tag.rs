@@ -35,6 +35,7 @@ pub struct Tag {
     pub on: Option<String>,
     pub off: Option<String>,
     pub children: Vec<Tag>,
+    pub samples:Option<usize>,
 }
 
 fn get_tag(element: &Element) -> Option<Tag> {
@@ -140,6 +141,7 @@ impl Tag {
             on: None,
             off: None,
             children: Vec::new(),
+            samples: None,
         }
     }
 }

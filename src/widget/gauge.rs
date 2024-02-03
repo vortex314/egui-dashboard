@@ -3,6 +3,7 @@ use crate::widget::Widget;
 use crate::widget::WidgetResult;
 use egui::containers::Frame;
 use egui::*;
+use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -23,14 +24,13 @@ impl Widget for Gauge {
             return WidgetResult::NoEffect;
         }
         self.expire_time = Instant::now() + self.expire_duration;
-        self.value = 0.0;
+        self.value = payload.parse().unwrap_or(0.0);
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
-        let mut value = 70.736 as f64;
         let mut range = self.min..=self.max;
         let square = self.rect.width().min(self.rect.height());
-        let g = egui_gauge::Gauge::new(value, range, square, Color32::RED)
+        let g = egui_gauge::Gauge::new(self.value, range, square, Color32::RED)
             .text(self.label.clone());
         ui.put(self.rect, g);
         Ok(())

@@ -9,7 +9,7 @@ use std::time::Instant;
 
 
 #[derive(Debug)]
-pub struct Label {
+pub struct Table {
     rect: Rect,
     label: String,
     text_size: i32,
@@ -18,7 +18,7 @@ pub struct Label {
     expire_duration: Duration,
 }
 
-impl Widget for Label {
+impl Widget for Table {
     fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
@@ -39,7 +39,7 @@ impl Widget for Label {
     }
 }
 
-impl Label {
+impl Table {
     pub fn new(rect: Rect, config: &Tag) -> Self {
         let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
         Self {

@@ -8,7 +8,7 @@ use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
-pub struct Progress {
+pub struct Plot {
     rect: Rect,
     label: String,
     src_topic: String,
@@ -20,13 +20,13 @@ pub struct Progress {
     unit: String,
 }
 
-impl Widget for Progress {
+impl Widget for Plot {
     fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
         info!(
-            "Progress {} : {} = {}",
+            "Plot {} : {} = {}",
             topic,
             payload,
             payload.parse().unwrap_or(0.0)
@@ -51,7 +51,7 @@ impl Widget for Progress {
     }
 }
 
-impl Progress {
+impl Plot {
     pub fn new(rect: Rect, config: &Tag) -> Self {
         let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
         let min = config.min.unwrap_or(0.0);
