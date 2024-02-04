@@ -38,3 +38,4 @@ It provides inputs like : Slider, Button, Switch, ValueInput
     </Col>
 </Dashboard>
 ```
+![prototype](./doc/prototype.png) 
