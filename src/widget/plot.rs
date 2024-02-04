@@ -52,8 +52,11 @@ impl Widget for Plot {
             .width(rect.width())
             .show_axes(true)
             .show_grid(true)
-            .data_aspect(1.0)
-            .show(ui, |plot_ui| {plot_ui.line(line);}).response;
+            .data_aspect(1.0);
+        let _r  = pl.show(ui, |plot_ui| {
+            plot_ui.line(line);
+        })
+        .response;
         Ok(())
     }
 }

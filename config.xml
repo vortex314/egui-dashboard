@@ -17,17 +17,17 @@
     <Row h="30">
         <Button w="100" label="ESP32" dst="src/esp32/sys/alive" pressed="true" released="false" />
         <Button w="200" label="heap" dst="src/esp32/sys/heap" pressed="25000.0" released="off" />
+        <Button w="300" label="heap" dst="src/esp32/sys/heap" pressed="25000.0" released="off" />
     </Row>
     <Col w="1024">
-        <Table h="100" w="250" src="src/esp32/*" label="ESP32" timeout="1000" />
-        <Slider label="Voltage" w="600" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
-        <Switch label="Power" w="500" dst="dst/esp32/sys/power" on="on" off="off" />
+        <Slider label="Voltage" w="600" h="40" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
+        <Progress label="Voltage" w="500" h="30" unit="V" src="src/esp32/sys/heap" min="0.0" max="50000.0" />
         <Plot label="Voltage" w="500" h="200" unit="V" src="src/esp32/sys/voltage" min="0.0" max="5.0" timeout="10000" samples="1000"/>
-        <Label label="Just a label text" h="40" text_size="10"/>
         <ValueOutput label="Voltage" w="500" unit="V" prefix="$" src="src/esp32/sys/voltage" />
-        <Progress label="Voltage" unit="V" w="500" h="30" src="src/esp32/sys/heap" min="0.0" max="50000.0" />
         <Map label="Location" image="img/map.png" w="500" src="src/esp32/sys/location" />
         <Compass label="direction" w="100" src="src/esp32/sys/compass" />
         <ValueInput label="Voltage" unit="V" w="500" src="src/esp32/sys/voltage" />
+        <Table h="100" w="250" src="src/esp32/*" label="ESP32" timeout="1000" />
+        <Switch label="Power" w="500" dst="dst/esp32/sys/power" on="on" off="off" />
     </Col>
 </Dashboard>
