@@ -125,6 +125,7 @@ impl eframe::App for DashboardApp {
         let mut repaint = false;
         for widget in self.widgets.iter_mut() {
             if widget.on_tick() == WidgetResult::Update {
+                info!("tick redraw");
                 repaint = true
             };
         }
@@ -140,6 +141,7 @@ impl eframe::App for DashboardApp {
                         if widget.on_message(topic.as_str(), message.as_str())
                             == WidgetResult::Update
                         {
+                            info!("PubSub redraw");
                             repaint = true
                         };
                     }
@@ -150,7 +152,7 @@ impl eframe::App for DashboardApp {
                 // warn!("Error in recv : {}", e);
             }
         }
-        ctx.request_repaint_after(Duration::from_millis(1000)); // update timed out widgets
+       // ctx.request_repaint_after(Duration::from_millis(1000)); // update timed out widgets
     }
 }
 

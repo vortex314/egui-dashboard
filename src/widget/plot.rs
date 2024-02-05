@@ -36,7 +36,7 @@ impl Widget for Plot {
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
-        let s = format!("{} {}", self.value, self.unit);
+        /*let s = format!("{} {}", self.value, self.unit);
         let rect = rect_border(self.rect);
         let n = 128;
         let line_points: PlotPoints = (0..=n)
@@ -59,7 +59,7 @@ impl Widget for Plot {
         let _r  = pl.show(&mut child_ui, |plot_ui| {
             plot_ui.line(line);
         })
-        .response;
+        .response;*/
         Ok(())
     }
 }

@@ -9,7 +9,7 @@ use std::time::Instant;
 
 use crate::widget::rect_border;
 
-
+#[derive(PartialEq)]
 enum StatusValue {
     Ok,
     Failed,
@@ -30,7 +30,7 @@ pub struct Status {
 impl Widget for Status {
 
     fn on_tick(&mut self) -> WidgetResult {
-        if self.expired() {
+        if self.expired() && self.value!=StatusValue::Timeout {
             self.value = StatusValue::Timeout;
             return WidgetResult::Update;
         }
