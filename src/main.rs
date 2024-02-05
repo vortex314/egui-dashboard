@@ -150,7 +150,7 @@ impl eframe::App for DashboardApp {
                 // warn!("Error in recv : {}", e);
             }
         }
-        ctx.request_repaint_after(Duration::from_millis(1000)); // updqte timed out widgets
+        ctx.request_repaint_after(Duration::from_millis(1000)); // update timed out widgets
     }
 }
 
@@ -253,6 +253,10 @@ fn load_widgets(
         }
         "Table" => {
             let widget = Table::new(rect, cfg);
+            widgets.push(Box::new(widget));
+        }
+        "Plot" => {
+            let widget = Plot::new(rect, cfg);
             widgets.push(Box::new(widget));
         }
         _ => {
