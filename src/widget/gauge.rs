@@ -27,10 +27,10 @@ impl Widget for Gauge {
         self.value = payload.parse().unwrap_or(0.0);
         WidgetResult::Update
     }
-    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
+    fn draw(&mut self, ui: &mut egui::Ui) -> Result<(), String> {
         let mut range = self.min..=self.max;
         let square = self.rect.width().min(self.rect.height());
-        let g = egui_gauge::Gauge::new(self.value, range, square, Color32::RED)
+        let g = egui_gauge::Gauge::new(self.value, range, square,Color32::RED)
             .text(self.label.clone());
         ui.put(self.rect, g);
         Ok(())

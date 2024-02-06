@@ -14,6 +14,7 @@ use egui::Color32;
 use egui::Layout;
 use egui::Rect;
 use egui::RichText;
+use eframe::egui::Ui;
 use log::{error, info, warn};
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -142,6 +143,8 @@ impl eframe::App for DashboardApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let causes = ctx.repaint_causes();
+  //      info!(" repaint causes {}",causes);
         ctx.set_visuals(egui::Visuals::light());
 
         egui::CentralPanel::default().show(ctx, |ui| {

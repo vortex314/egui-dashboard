@@ -20,11 +20,8 @@ pub enum WidgetResult {
 }
 
 pub trait Widget {
-    fn draw(&mut self, ui: &mut Ui) -> Result<(), String>;
+    fn draw(&mut self, ui: &mut egui::Ui) -> Result<(), String>;
     fn on_message(&mut self, topic:&str,payload:&str) -> WidgetResult;
-    fn on_tick(&mut self) -> WidgetResult {
-        WidgetResult::NoEffect
-    }
 }
 
 pub fn rect_border(rect: egui::Rect) -> egui::Rect {

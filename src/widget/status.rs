@@ -29,13 +29,6 @@ pub struct Status {
 
 impl Widget for Status {
 
-    fn on_tick(&mut self) -> WidgetResult {
-        if self.expired() && self.value!=StatusValue::Timeout {
-            self.value = StatusValue::Timeout;
-            return WidgetResult::Update;
-        }
-        WidgetResult::NoEffect
-    }
 
     fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
         if self.src_topic != topic {
