@@ -42,13 +42,13 @@ use pubsub::*;
 use widget::button::Button;
 use widget::gauge::Gauge;
 use widget::label::Label;
+use widget::plot::Plot;
 use widget::progress::Progress;
 use widget::slider::Slider;
 use widget::status::Status;
+use widget::table::Table;
 use widget::tag::load_xml_file;
 use widget::tag::Tag;
-use widget::table::Table;
-use widget::plot::Plot;
 use widget::Widget;
 
 use clap::Parser;
@@ -65,8 +65,8 @@ struct Args {
     config: String,
 }
 
-//#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
-fn main() {
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+async fn main() -> () {
     let args = Args::parse();
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
@@ -75,10 +75,12 @@ fn main() {
     let (mut cmd_sender, mut cmd_receiver) = channel::<PubSubCmd>(16);
 
     let mut config = Box::new(load_xml_file(&args.config).unwrap());
-    let widgets = load_dashboard(&mut config, cmd_sender);
-    let mut app = DashboardApp::new(widgets, publish_receiver);
-    let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
+    let dashboard = Arc::new(Mutex::new(Dashboard::new()));
+    let _r = dashboard.lock().unwrap().load(&mut config, cmd_sender.clone()).unwrap();
+    let mut db_clone = dashboard.clone();
 
+
+// redis receiver thread >> publish_sender
     thread::spawn(move || {
         let result = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
@@ -93,21 +95,45 @@ fn main() {
                 .await
             });
     });
+// publish receiver >> dashboard
+    thread::spawn(move || {
+        let result = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async move  {
+                loop {
+                    let x = publish_receiver.recv().await;
+                    match x {
+                        Some(m) => {
+                            info!("Received message {:?}", m);
+                            db_clone.lock().unwrap().on_message(m);
+                        },
+                        None => {
+                            warn!("Error in recv : None ");
+                        }
+                    }
+                }
+            });
+    });
 
-    let _ = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
+    let mut app = DashboardApp::new(dashboard);
+    let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
+    let _r = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
     info!("Exiting.");
 }
 
+pub struct Dashboard {
+    widgets: Vec<Box<dyn Widget + Send>>,
+}
 pub struct DashboardApp {
-    widgets: Vec<Box<dyn Widget>>,
-    receiver_events: Receiver<PubSubEvent>,
+    dashboard : Arc<Mutex<Dashboard>>
 }
 
 impl DashboardApp {
-    fn new(widgets: Vec<Box<dyn Widget>>, receiver_events: Receiver<PubSubEvent>) -> Self {
+    fn new(dashboard: Arc<Mutex<Dashboard>>) -> Self {
         Self {
-            widgets,
-            receiver_events,
+            dashboard
         }
     }
 }
@@ -119,82 +145,70 @@ impl eframe::App for DashboardApp {
         ctx.set_visuals(egui::Visuals::light());
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let rect = egui::Rect::EVERYTHING;
-            show_dashboard(ui, &mut self.widgets);
+            self.dashboard.lock().unwrap().draw(ui);
         });
-        let mut repaint = false;
-        for widget in self.widgets.iter_mut() {
-            if widget.on_tick() == WidgetResult::Update {
-                info!("tick redraw");
-                repaint = true
-            };
+
+        ctx.request_repaint_after(Duration::from_millis(1000)); // update timed out widgets
+    }
+}
+
+impl Dashboard {
+    fn new() -> Self {
+        Self {
+            widgets: Vec::new(),
         }
-        if repaint {
-            ctx.request_repaint();
-            repaint=false;
-        };
-        let x = self.receiver_events.try_recv();
-        match x {
-            Ok(m) => match m {
-                PubSubEvent::Publish { topic, message } => {
-                    for widget in self.widgets.iter_mut() {
-                        if widget.on_message(topic.as_str(), message.as_str())
-                            == WidgetResult::Update
-                        {
-                            info!("PubSub redraw");
-                            repaint = true
-                        };
-                    }
-                    if repaint { ctx.request_repaint()};
+    }
+
+    fn draw(&mut self, ui: &mut egui::Ui) {
+        self.widgets.iter_mut().for_each(|widget| {
+            let _r = widget.draw(ui);
+        });
+    }
+
+    fn on_message(&mut self, message: PubSubEvent) -> bool {
+        let mut repaint = false;
+        match message {
+            PubSubEvent::Publish { topic, message } => {
+                for widget in self.widgets.iter_mut() {
+                    if widget.on_message(topic.as_str(), message.as_str()) == WidgetResult::Update {
+                        repaint = true
+                    };
                 }
-            },
-            Err(e) => {
-                // warn!("Error in recv : {}", e);
             }
         }
-       // ctx.request_repaint_after(Duration::from_millis(1000)); // update timed out widgets
+        repaint
     }
-}
 
-fn show_dashboard(ui: &mut egui::Ui, widgets: &mut Vec<Box<dyn Widget>>) {
-    // info!("Drawing widgets [{}]", widgets.len());
-    let mut rect = egui::Rect::EVERYTHING;
-    widgets.iter_mut().for_each(|widget| {
-        let _r = widget.draw(ui);
-    });
-}
-
-fn load_dashboard(cfg: &Tag, cmd_sender: Sender<PubSubCmd>) -> Vec<Box<dyn Widget>> {
-    if cfg.name != "Dashboard" {
-        warn!("Invalid config file. Missing Dashboard tag.");
-        return Vec::new();
+    fn load(&mut self, cfg: &Tag, cmd_sender: Sender<PubSubCmd>) -> Result<(), String> {
+        if cfg.name != "Dashboard" {
+            return Err("Invalid config file. Missing Dashboard tag.".to_string());
+        }
+        let mut rect = Rect::EVERYTHING;
+        rect.min.y = 0.0;
+        rect.min.x = 0.0;
+        rect.max.x = cfg.width.unwrap_or(1025) as f32;
+        rect.max.y = cfg.height.unwrap_or(769) as f32;
+        cfg.children.iter().for_each(|child| {
+            info!("Loading widget {}", child.name);
+            let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
+            self.widgets.append(&mut sub_widgets);
+            if child.width.is_some() {
+                rect.min.x += child.width.unwrap() as f32;
+            }
+            if child.height.is_some() {
+                rect.min.y += child.height.unwrap() as f32;
+            }
+        });
+        Ok(())
     }
-    let mut widgets = Vec::new();
-    let mut rect = Rect::EVERYTHING;
-    rect.min.y = 0.0;
-    rect.min.x = 0.0;
-    rect.max.x = cfg.width.unwrap_or(1025) as f32;
-    rect.max.y = cfg.height.unwrap_or(769) as f32;
-    cfg.children.iter().for_each(|child| {
-        info!("Loading widget {}", child.name);
-        let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
-        widgets.append(&mut sub_widgets);
-        if child.width.is_some() {
-            rect.min.x += child.width.unwrap() as f32;
-        }
-        if child.height.is_some() {
-            rect.min.y += child.height.unwrap() as f32;
-        }
-    });
-    widgets
 }
 
 fn load_widgets(
     rect: egui::Rect,
     cfg: &Tag,
     cmd_sender: Sender<PubSubCmd>,
-) -> Vec<Box<dyn Widget>> {
-    let mut widgets: Vec<Box<dyn Widget>> = Vec::new();
+) -> Vec<Box<dyn Widget + Send >> {
+    let mut widgets: Vec<Box<dyn Widget+Send>> = Vec::new();
     let mut rect = rect;
 
     if cfg.height.is_some() {
@@ -206,7 +220,7 @@ fn load_widgets(
     info!(
         "{} : {} {:?}",
         cfg.name,
-        cfg.label.as_ref().get_or_insert(&String::from("-")),
+        cfg.label.as_ref().get_or_insert(&String::from("NO_LABEL")),
         rect
     );
 

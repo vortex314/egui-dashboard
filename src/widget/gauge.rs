@@ -28,7 +28,6 @@ impl Widget for Gauge {
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
-        info!("Gauge draw");
         let mut range = self.min..=self.max;
         let square = self.rect.width().min(self.rect.height());
         let g = egui_gauge::Gauge::new(self.value, range, square, Color32::RED)

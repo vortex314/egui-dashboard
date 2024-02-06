@@ -46,7 +46,9 @@ impl Widget for Status {
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
-
+        if self.expired() && self.value!=StatusValue::Timeout {
+            self.value = StatusValue::Timeout;
+        }
         let mut color = match self.value {
             StatusValue::Ok => Color32::from_rgb(0,255,0),
             StatusValue::Failed => Color32::from_rgb(255,0,0),

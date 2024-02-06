@@ -53,7 +53,7 @@ pub async fn redis(
     client.psubscribe(patterns).await.unwrap();
     info!("redis subscribed ");
     client.on_message(move |msg| {
-        info!(
+        debug!(
             "Publish received topic: {} => {:?} ",
             msg.channel,
             msg.value.as_string()
