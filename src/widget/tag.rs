@@ -36,6 +36,8 @@ pub struct Tag {
     pub off: Option<String>,
     pub children: Vec<Tag>,
     pub samples:Option<usize>,
+    pub timespan:Option<i32>,
+    pub samples:Option<usize>,
 }
 
 fn get_tag(element: &Element) -> Option<Tag> {
@@ -104,6 +106,12 @@ fn get_tag(element: &Element) -> Option<Tag> {
             "text_size" => {
                 tag.text_size = Some(FromStr::from_str(attr.1).unwrap());
             },
+            "samples" => {
+                tag.samples = Some(FromStr::from_str(attr.1).unwrap());
+            },
+            "timespan" => {
+                tag.timespan = Some(FromStr::from_str(attr.1).unwrap());
+            },
             _ => { warn!("Unknown attribute: {}", attr.0);},
         }
     });
@@ -141,6 +149,8 @@ impl Tag {
             on: None,
             off: None,
             children: Vec::new(),
+            samples: None,
+            timespan: None,
             samples: None,
         }
     }

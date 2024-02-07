@@ -28,6 +28,7 @@ impl Widget for Gauge {
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut egui::Ui) -> Result<(), String> {
+        info!("Gauge draw {:?}",self.major_ticks());
         let mut range = self.min..=self.max;
         let square = self.rect.width().min(self.rect.height());
         let g = egui_gauge::Gauge::new(self.value, range, square,Color32::RED)
@@ -54,5 +55,33 @@ impl Gauge {
 
     fn expired(&self) -> bool {
         Instant::now() > self.expire_time
+    }
+
+    fn major_ticks(&self) -> Vec<f64> {
+        let mut ticks = Vec::new();
+        let range = self.max - self.min;
+        let num_major_ticks = 5;
+        let num_minor_ticks_per_major = 4;
+        let major_increment = range / (num_major_ticks - 1) as f64;
+        let rounding_factor = 10.0_f64.powf(major_increment.log10().floor());
+
+        let rounded_min_value = (self.min / rounding_factor).floor() * rounding_factor;
+        let rounded_max_value = (self.max / rounding_factor).ceil() * rounding_factor;
+        let rounded_range = rounded_max_value - rounded_min_value;
+        let major_increment = rounded_range / (num_major_ticks - 1) as f64;
+
+        for i in 0..num_major_ticks {
+            let tick_value = rounded_min_value + i as f64 * major_increment as f64;
+            ticks.push(tick_value);
+            /*if i < num_major_ticks - 1 && num_minor_ticks_per_major > 0 {
+                let minor_increment = major_increment / (num_minor_ticks_per_major + 1) as f64;
+                for j in 1..=num_minor_ticks_per_major {
+                    let minor_tick_value = tick_value + j as f64 * minor_increment as f64;
+                    ticks.push(minor_tick_value);
+                }
+            }*/
+        }
+        ticks
+        
     }
 }

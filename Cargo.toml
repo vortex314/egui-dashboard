@@ -7,11 +7,11 @@ edition = "2021"
 
 [dependencies]
 clap = { version="4.0.8", features=["derive"]}
-eframe = "0.25.0"
-egui = { version="0.25.0",features=["callstack"]}
-egui_gauge = "*"
-egui_extras={ version="0.25.0",features=[]}
-egui_plot = { version="0.25.0",features=[]} 
+eframe = "0.26.0"
+egui = { version="0.26.0",features=["callstack"]}
+egui_gauge = { path ="../egui_gauge" }
+egui_extras={ version="0.26.0",features=[]}
+egui_plot = { version="0.26.0",features=[]} 
 log = "0.4.14" # for logging
 simplelog = "*" # for logging
 env_logger = "0.11.0"

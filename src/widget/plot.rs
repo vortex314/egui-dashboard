@@ -2,6 +2,7 @@ use crate::widget::rect_border;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
 use crate::widget::WidgetResult;
+use crate::store::timeseries;
 use egui::containers::Frame;
 use egui::*;
 use egui_plot::PlotPoints;
@@ -19,6 +20,7 @@ pub struct Plot {
     max: f64,
     value: f64,
     unit: String,
+    timeseries: timeseries::TimeSeries,
 }
 
 impl Widget for Plot {
@@ -58,8 +60,7 @@ impl Widget for Plot {
         let mut child_ui = ui.child_ui(self.rect, layout);
         let _r  = pl.show(&mut child_ui, |plot_ui| {
             plot_ui.line(line);
-        })
-        .response;
+        });
         Ok(())
     }
 }
@@ -78,6 +79,11 @@ impl Plot {
             max: config.max.unwrap_or(1.0),
             value: min,
             unit: config.unit.as_ref().unwrap_or(&String::from("")).clone(),
+            timeseries: timeseries::TimeSeries::new(
+                config.name.clone(),
+                Duration::from_millis(config.timespan.unwrap_or(3000) as u64),
+                config.samples.unwrap_or(100) as usize,
+            ),
         }
     }
     pub fn fraction(&self, value: f64) -> f32 {

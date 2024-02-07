@@ -144,7 +144,7 @@ impl eframe::App for DashboardApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let causes = ctx.repaint_causes();
-  //      info!(" repaint causes {}",causes);
+        info!(" repaint causes {:?}",causes);
         ctx.set_visuals(egui::Visuals::light());
 
         egui::CentralPanel::default().show(ctx, |ui| {
