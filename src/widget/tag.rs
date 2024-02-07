@@ -37,7 +37,6 @@ pub struct Tag {
     pub children: Vec<Tag>,
     pub samples:Option<usize>,
     pub timespan:Option<i32>,
-    pub samples:Option<usize>,
 }
 
 fn get_tag(element: &Element) -> Option<Tag> {
@@ -151,7 +150,6 @@ impl Tag {
             children: Vec::new(),
             samples: None,
             timespan: None,
-            samples: None,
         }
     }
 }

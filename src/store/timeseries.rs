@@ -1,7 +1,7 @@
-use chrono::{DateTime, Duration, Local, Utc};
+use std::time::{Duration, Instant};
 #[derive(Debug, Clone)]
 struct TimeEntry {
-    time: DateTime<Utc>,
+    time: std::time::Instant,
     value: f64,
 }
 
@@ -22,15 +22,16 @@ impl TimeSeries {
             entries: Vec::new(),
         }
     }
-    pub fn add(&mut self, time: DateTime<Utc>, value: f64) {
+    pub fn add(&mut self, time: std::time::Instant, value: f64) {
         self.entries.push(TimeEntry { time, value });
-        self.entries.retain(|entry| time.signed_duration_since(entry.time) < self.timespan );
+        let now = Instant::now();
+        self.entries.retain(|entry| now - entry.time < self.timespan );
         loop {
             if self.entries.len() < self.max_entries { break ;}
             self.entries.pop();
         }
     }
-    fn get(&self, time: DateTime<Utc>) -> f64 {
+    fn get(&self, time: Instant) -> f64 {
         let mut result = 0.0;
         for entry in self.entries.iter() {
             if time - entry.time < self.timespan {
@@ -39,7 +40,7 @@ impl TimeSeries {
         }
         result
     }
-    pub fn get_series(&self, time: DateTime<Utc>) -> Vec<TimeEntry> {
+    pub fn get_series(&self, time: Instant) -> Vec<TimeEntry> {
         let mut result = Vec::new();
         for entry in self.entries.iter() {
             if time - entry.time < self.timespan {
