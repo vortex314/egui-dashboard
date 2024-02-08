@@ -75,9 +75,10 @@ async fn main() -> () {
     let (mut publish_sender, mut publish_receiver) = channel::<PubSubEvent>(16);
     let (mut cmd_sender, mut cmd_receiver) = channel::<PubSubCmd>(16);
 
-    let mut config = Box::new(load_xml_file(&args.config).unwrap());
+    let mut dashboard_config = Box::new(load_xml_file(&args.config).unwrap());
+    let dashboard_title = dashboard_config.label.clone().unwrap_or(String::from("Dashboard"));
     let dashboard = Arc::new(Mutex::new(Dashboard::new()));
-    let _r = dashboard.lock().unwrap().load(&mut config, cmd_sender.clone()).unwrap();
+    let _r = dashboard.lock().unwrap().load(&mut dashboard_config, cmd_sender.clone()).unwrap();
     let mut db_clone = dashboard.clone();
 
 
@@ -120,7 +121,7 @@ async fn main() -> () {
 
     let mut app = DashboardApp::new(dashboard);
     let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
-    let _r = eframe::run_native("Monitor app", native_options, Box::new(|_| Box::new(app)));
+    let _r = eframe::run_native(dashboard_title.as_str(), native_options, Box::new(|_| Box::new(app)));
     info!("Exiting.");
 }
 

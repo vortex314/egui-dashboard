@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant};
 #[derive(Debug, Clone)]
-struct TimeEntry {
-    time: std::time::Instant,
-    value: f64,
+pub struct TimeEntry {
+    pub time: std::time::Instant,
+    pub value: f64,
 }
 
 #[derive(Debug)]
@@ -40,12 +40,10 @@ impl TimeSeries {
         }
         result
     }
-    pub fn get_series(&self, time: Instant) -> Vec<TimeEntry> {
+    pub fn get_series(&self) -> Vec<TimeEntry> {
         let mut result = Vec::new();
         for entry in self.entries.iter() {
-            if time - entry.time < self.timespan {
                 result.push(entry.clone());
-            }
         }
         result
     }

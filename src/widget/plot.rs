@@ -35,17 +35,18 @@ impl Widget for Plot {
             payload.parse().unwrap_or(0.0)
         );
         self.value = payload.parse().unwrap_or(self.min);
+        self.timeseries.add(Instant::now(), self.value);
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let s = format!("{} {}", self.value, self.unit);
         let rect = rect_border(self.rect);
-        let n = 128;
-        let line_points: PlotPoints = (0..=n)
-            .map(|i| {
-                use std::f64::consts::TAU;
-                let x = egui::remap(i as f64, 0.0..=n as f64, -TAU..=TAU);
-                [x, x.sin()]
+        let line_data = self.timeseries.get_series();
+        let line_points: PlotPoints = line_data
+            .iter()
+            .map(|entry| {
+                let x = entry.time.elapsed().as_millis() as f64;
+                [x, entry.value]
             })
             .collect();
         let line = egui_plot::Line::new(line_points);
@@ -53,8 +54,7 @@ impl Widget for Plot {
             .height(rect.height())
             .width(rect.width())
             .show_axes(true)
-            .show_grid(true)
-            .data_aspect(1.0);
+            .show_grid(true);
         let layout = Layout::top_down(Align::LEFT);
         info!("Plot {} : {:?}", self.label, self.rect);
         let mut child_ui = ui.child_ui(self.rect, layout);
@@ -67,7 +67,7 @@ impl Widget for Plot {
 
 impl Plot {
     pub fn new(rect: Rect, config: &Tag) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
+        let expire_duration = Duration::from_millis(config.timespan.unwrap_or(10000) as u64);
         let min = config.min.unwrap_or(0.0);
         Self {
             rect,

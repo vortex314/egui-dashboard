@@ -1,7 +1,4 @@
-<Dashboard h="768" w="1024" url="redis://limero.ddns.net:6379" xmlns="./config.xsd" theme="light">
-    <Row h="40">
-        <Status label="Dashboard LIMERO " w="1024" text_size="40" src="src/ws2redis/system/alive"/>
-    </Row>
+<Dashboard label="Prototype Dashboard" h="768" w="1024" url="redis://limero.ddns.net:6379" xmlns="./config.xsd" theme="light">
     <Row h="40">
         <Status w="100" src="src/ws2redis/system/alive" ok="true" nok="false" label="ws2redis" />
         <Status w="200" src="src/esp32/sys/alive" ok="true" nok="false" label="ESP32" />
@@ -21,7 +18,7 @@
     <Col w="1024">
         <Slider label="Voltage" w="600" h="40" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
         <Progress label="Voltage" w="500" h="30" unit="V" src="src/esp32/sys/heap" min="0.0" max="50000.0" />
-        <Plot label="Voltage" w="500" h="200" unit="V" src="src/esp32/sys/voltage" min="0.0" max="5.0" timespan="10000" samples="1000"/>
+        <Plot label="Voltage" w="500" h="200" unit="V" src="src/esp32/sys/heap" min="0.0" max="5.0" timespan="10000" samples="1000"/>
         <ValueOutput label="Voltage" w="500" unit="V" prefix="$" src="src/esp32/sys/voltage" />
         <Map label="Location" image="img/map.png" w="500" src="src/esp32/sys/location" />
         <Compass label="direction" w="100" src="src/esp32/sys/compass" />
