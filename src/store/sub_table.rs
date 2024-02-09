@@ -10,7 +10,7 @@ pub enum OrderSort {
 pub struct LastValue {
     pub topic: String,
     pub value: String,
-    pub time: DateTime<Local>,
+    pub date_time: DateTime<Local>,
     pub count: i32,
 }
 
@@ -19,13 +19,13 @@ impl LastValue {
         LastValue {
             topic,
             value,
-            time,
+            date_time: time,
             count: 1,
         }
     }
     fn update(&mut self, entry: &LastValue) {
         self.value = entry.value.clone();
-        self.time = entry.time;
+        self.date_time = entry.date_time;
         self.count += 1;
     }
 }
@@ -47,7 +47,7 @@ impl SubTable {
                 entry.update(&LastValue {
                     topic: topic.clone(),
                     value: message.clone(),
-                    time: Local::now(),
+                    date_time: Local::now(),
                     count: 1,
                 });
                 found = true;
@@ -58,7 +58,7 @@ impl SubTable {
             self.entries.push(LastValue { 
                 topic: topic.clone(),
                 value: message.clone(),
-                time: Local::now(),
+                date_time: Local::now(),
                 count: 1,
             });
         }
@@ -82,7 +82,7 @@ fn order_list(entry_list: &mut SubTable, ordering: OrderSort) {
             entry_list.entries.sort_by(|a, b| a.value.cmp(&b.value));
         }
         OrderSort::Time => {
-            entry_list.entries.sort_by(|a, b| a.time.cmp(&b.time));
+            entry_list.entries.sort_by(|a, b| a.date_time.cmp(&b.date_time));
         }
         OrderSort::Count => {
             entry_list.entries.sort_by(|a, b| a.count.cmp(&b.count));

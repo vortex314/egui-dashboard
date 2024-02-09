@@ -1,4 +1,5 @@
-<Dashboard label="Prototype Dashboard" h="768" w="1024" url="redis://limero.ddns.net:6379" xmlns="./config.xsd" theme="light">
+<Dashboard label="Prototype Dashboard" h="1768" w="2024" url="redis://limero.ddns.net:6379"
+    xmlns="./config.xsd" theme="light">
     <Row h="40">
         <Status w="100" src="src/ws2redis/system/alive" ok="true" nok="false" label="ws2redis" />
         <Status w="200" src="src/esp32/sys/alive" ok="true" nok="false" label="ESP32" />
@@ -16,14 +17,14 @@
         <Button w="300" label="heap" dst="src/esp32/sys/heap" pressed="25000.0" released="off" />
     </Row>
     <Col w="1024">
-        <Slider label="Voltage" w="600" h="40" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
-        <Progress label="Voltage" w="500" h="30" unit="V" src="src/esp32/sys/heap" min="0.0" max="50000.0" />
-        <Plot label="Voltage" w="500" h="200" unit="V" src="src/esp32/sys/heap" min="0.0" max="5.0" timespan="10000" samples="1000"/>
+        <Slider h="40" w="600"  label="Voltage" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
+        <Progress h="30" w="600" label="Voltage" unit="V" src="src/esp32/sys/heap" min="0.0" max="50000.0" />
+        <Plot h="200" w="500"  label="Voltage" unit="V" src="src/esp32/sys/heap" min="0.0" max="5.0" timespan="10000" samples="1000"/>
+        <Table h="300" w="1000" src="src/.*" label="ESP32" timeout="10000" />
         <ValueOutput label="Voltage" w="500" unit="V" prefix="$" src="src/esp32/sys/voltage" />
         <Map label="Location" image="img/map.png" w="500" src="src/esp32/sys/location" />
-        <Compass label="direction" w="100" src="src/esp32/sys/compass" />
-        <ValueInput label="Voltage" unit="V" w="500" src="src/esp32/sys/voltage" />
-        <Table h="100" w="250" src="src/esp32/*" label="ESP32" timeout="1000" />
+        <Compass h="100" label="direction" src="src/esp32/sys/compass" />
+        <ValueInput h="30" label="Voltage" unit="V" w="500" src="src/esp32/sys/voltage" />
         <Switch label="Power" w="500" dst="dst/esp32/sys/power" on="on" off="off" />
     </Col>
 </Dashboard>

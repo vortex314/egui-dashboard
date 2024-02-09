@@ -1,40 +1,83 @@
+use crate::store::*;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
 use crate::widget::WidgetResult;
 use egui::containers::Frame;
 use egui::*;
+use egui_extras::{Column, TableBuilder};
+use regex::Regex;
+
 use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
-
-#[derive(Debug)]
 pub struct Table {
     rect: Rect,
     label: String,
     text_size: i32,
+    table: sub_table::SubTable,
     src_topic: String,
     expire_time: Instant,
     expire_duration: Duration,
+    regex: Regex,
 }
 
 impl Widget for Table {
     fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
-        if self.src_topic != topic {
-            return WidgetResult::NoEffect;
+        if self.regex.is_match(topic) {
+            self.table.add(topic.to_string(), payload.to_string());
+            info!("Table added {} {} ", topic, payload);
+            WidgetResult::Update
+        } else {
+            WidgetResult::NoEffect
         }
-        self.label = payload.to_string();
-        WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
-        ui.put(
-            self.rect,
-            egui::widgets::Label::new(
-                egui::RichText::new(self.label.clone())
-                    .size(self.text_size as f32)
-                    .color(Color32::BLACK),
-            ),
-        );
+        let layout = Layout::top_down(Align::LEFT);
+        info!("Plot {} : {:?}", self.label, self.rect);
+        let mut child_ui = ui.child_ui(self.rect, layout);
+        let mut style = egui::Style::default();
+        style.visuals.override_text_color = Some(Color32::BLACK);
+        child_ui.set_style(style);
+        let mut builder = TableBuilder::new(&mut child_ui)
+            .column(Column::initial(60.0))
+            .column(Column::initial(80.0))
+            .column(Column::initial(160.0))
+            .column(Column::remainder())
+            .header(20.0, |mut header| {
+                header.col(|ui| {
+                    ui.heading("Count");
+                });
+                header.col(|ui| {
+                    ui.heading("Time");
+                });
+                header.col(|ui| {
+                    ui.heading("Topic");
+                });
+                header.col(|ui| {
+                    ui.heading("Value");
+                });
+            });
+
+        builder.body(|mut body| {
+            self.table.entries.iter().for_each(|x| {
+                body.row(20.0, |mut row| {
+                    row.col(|ui| {
+                        ui.label(x.count.to_string());
+                    });
+                    row.col(|ui| {
+                        ui.label(x.date_time.clone().format("%H:%M:%S").to_string().as_str());
+                    });
+                    row.col(|ui| {
+                        ui.label(x.topic.as_str());
+                    });
+                    row.col(|ui| {
+                        ui.label(x.value.as_str());
+                    });
+                });
+            });
+        });
+
         Ok(())
     }
 }
@@ -42,13 +85,20 @@ impl Widget for Table {
 impl Table {
     pub fn new(rect: Rect, config: &Tag) -> Self {
         let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
+        let src_pattern = config
+            .src
+            .as_ref()
+            .unwrap_or(&String::from("IMPOSSIBLE"))
+            .clone();
         Self {
             rect,
             label: config.label.as_ref().unwrap_or(&config.name).clone(),
             text_size: config.text_size.unwrap_or(20),
-            src_topic: config.src.as_ref().unwrap_or(&String::from("")).clone(),
+            table: sub_table::SubTable::new(),
+            src_topic: src_pattern.clone(),
             expire_time: Instant::now() + expire_duration,
             expire_duration,
+            regex: Regex::new(src_pattern.as_str()).unwrap(),
         }
     }
 }

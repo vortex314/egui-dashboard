@@ -15,13 +15,13 @@ use tokio::time::{self, Duration};
 use tokio::{sync::mpsc, task};
 use tokio_stream::StreamExt;
 
-pub async fn mqtt(config: Value, tx_broadcast: broadcast::Sender<PubSubEvent>) {
+pub async fn mqtt(
+    url: &str,
+    publish_sender: Sender<PubSubEvent>,
+    cmd_receiver: &mut Receiver<PubSubCmd>,
+) -> Result<(), Error> {
     loop {
-        let url = format!(
-            "mqtt://{}:{}/",
-            config["host"].as_str().or(Some("localhost")).unwrap(),
-            config["port"].as_str().or(Some("1883")).unwrap()
-        );
+
         let mut client = Client::builder()
             .set_url_string(&url)
             .unwrap()
