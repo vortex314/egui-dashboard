@@ -15,7 +15,7 @@ pub struct Plot {
     label: String,
     src_topic: String,
     expire_time: Instant,
-    expire_duration: Duration,
+    timespan: Duration,
     min: f64,
     max: f64,
     value: f64,
@@ -41,11 +41,13 @@ impl Widget for Plot {
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let s = format!("{} {}", self.value, self.unit);
         let rect = rect_border(self.rect);
+        self.timeseries.clean();
         let line_data = self.timeseries.get_series();
+        let earlier = Instant::now()-self.timespan;
         let line_points: PlotPoints = line_data
             .iter()
             .map(|entry| {
-                let x = entry.time.elapsed().as_millis() as f64;
+                let x = entry.time.duration_since(earlier).as_secs_f64();
                 [x, entry.value]
             })
             .collect();
@@ -67,14 +69,14 @@ impl Widget for Plot {
 
 impl Plot {
     pub fn new(rect: Rect, config: &Tag) -> Self {
-        let expire_duration = Duration::from_millis(config.timespan.unwrap_or(10000) as u64);
+        let timespan = Duration::from_millis(config.timespan.unwrap_or(10000) as u64);
         let min = config.min.unwrap_or(0.0);
         Self {
             rect,
             label: config.label.as_ref().unwrap_or(&config.name).clone(),
             src_topic: config.src.as_ref().unwrap_or(&String::from("")).clone(),
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
+            expire_time: Instant::now() + timespan,
+            timespan,
             min,
             max: config.max.unwrap_or(1.0),
             value: min,

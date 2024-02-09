@@ -24,6 +24,9 @@ impl TimeSeries {
     }
     pub fn add(&mut self, time: std::time::Instant, value: f64) {
         self.entries.push(TimeEntry { time, value });
+        self.clean();
+    }
+    pub fn clean(&mut self){
         let now = Instant::now();
         self.entries.retain(|entry| now - entry.time < self.timespan );
         loop {
