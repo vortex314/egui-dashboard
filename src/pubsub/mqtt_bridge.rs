@@ -15,6 +15,7 @@ use std::thread::{self, sleep, Thread};
 use crate::pubsub::{PubSubCmd, PubSubEvent};
 use mqtt_async_client::client::{Client, ReadResult, SubscribeTopic};
 use mqtt_async_client::client::{Publish, QoS, Subscribe};
+use mqtt_async_client::Result;
 use tokio::sync::broadcast;
 use tokio::time::{self, Duration};
 use tokio::{sync::mpsc, task};
@@ -24,7 +25,7 @@ pub async fn mqtt(
     url: &str,
     publish_sender: Sender<PubSubEvent>,
     cmd_receiver: &mut Receiver<PubSubCmd>,
-) -> Result<(), Error> {
+) -> std::result::Result<(), Error> {
     loop {
         let mut client = Client::builder()
             .set_url_string(&url)
@@ -51,22 +52,37 @@ pub async fn mqtt(
                 error!("Error subscribing: {}", e);
             }
         };
-
-        select!(
-            cmd = cmd_receiver.recv() =>  {
-                handle_cmd(&mut client, cmd);
-            }
-            msg = client.read_subscriptions() =>{
-                handle_publish(publish_sender, msg);
-            }
-        );
+        loop {
+            select!(
+                cmd = cmd_receiver.recv() =>  {
+                    let res = handle_cmd(&mut client, cmd).await;
+                    match res   {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Error handle_publish: {}", e);
+                            break;
+                        }
+                    }
+                }
+                msg = client.read_subscriptions() =>{
+                    let res  = handle_publish(publish_sender.clone(), msg).await;
+                    match res   {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Error handle_publish: {}", e);
+                            break;
+                        }
+                    }
+                }
+            );
+        }
 
         let _r = client.disconnect().await;
         info!("MQTT disconnect {:?}", _r);
     }
 }
 
-async fn handle_cmd(client: &mut Client, cmd: Option<PubSubCmd>) {
+async fn handle_cmd(client: &mut Client, cmd: Option<PubSubCmd>) -> std::result::Result<(), Error> {
     match cmd {
         Some(cmd) => {
             info!("PubSubCmd {:?}", cmd);
@@ -93,17 +109,22 @@ async fn handle_cmd(client: &mut Client, cmd: Option<PubSubCmd>) {
                     let _r = client.subscribe(subopts).await;
                 }
             }
+            return Ok(());
         }
         None => {
             info!("rx_cmd closed");
+            return Err(Error);
         }
     }
 }
 
-async fn handle_publish(publish_sender: Sender<PubSubEvent>, read_result: Result<ReadResult>) {
+async fn handle_publish(
+    publish_sender: Sender<PubSubEvent>,
+    read_result: Result<ReadResult>,
+) -> std::result::Result<(), Error> {
     match read_result {
         Ok(msg) => {
-            info!("Mqtt topic: {}", msg.topic().to_string(),);
+    //        info!("Mqtt topic: {}", msg.topic().to_string(),);
             let _r = publish_sender
                 .send(PubSubEvent::Publish {
                     topic: msg.topic().to_string(),
@@ -111,14 +132,18 @@ async fn handle_publish(publish_sender: Sender<PubSubEvent>, read_result: Result
                 })
                 .await;
             match _r {
-                Ok(_) => {}
+                Ok(_) => {
+                    return Ok(());
+                }
                 Err(e) => {
                     error!("Error sending PubSubEvent::Publish: {}", e);
+                    return Err(Error);
                 }
             }
         }
         Err(e) => {
             error!("Error MQTT recv {}", e);
+            return Err(Error);
         }
     }
 }

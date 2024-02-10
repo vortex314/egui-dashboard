@@ -31,7 +31,7 @@ impl LastValue {
 }
 
 pub struct SubTable {
-     pub entries: Vec<LastValue>,
+    pub entries: Vec<LastValue>,
 }
 
 impl SubTable {
@@ -55,7 +55,7 @@ impl SubTable {
             }
         }
         if !found {
-            self.entries.push(LastValue { 
+            self.entries.push(LastValue {
                 topic: topic.clone(),
                 value: message.clone(),
                 date_time: Local::now(),
@@ -71,23 +71,39 @@ impl SubTable {
         }
         None
     }
-    pub fn order(&mut self,ordering: OrderSort) {
-        match ordering {
-            OrderSort::Topic => {
-                self.entries.sort_by(|a, b| a.topic.cmp(&b.topic));
+    pub fn order(&mut self, ordering: OrderSort, reverse: bool) {
+        if reverse {
+            match ordering {
+                OrderSort::Topic => {
+                    self.entries.sort_by(|a, b| b.topic.cmp(&a.topic));
+                }
+                OrderSort::Value => {
+                    self.entries.sort_by(|a, b| b.value.cmp(&a.value));
+                }
+                OrderSort::Time => {
+                    self.entries.sort_by(|a, b| b.date_time.cmp(&a.date_time));
+                }
+                OrderSort::Count => {
+                    self.entries.sort_by(|a, b| b.count.cmp(&a.count));
+                }
             }
-            OrderSort::Value => {
-                self.entries.sort_by(|a, b| a.value.cmp(&b.value));
-            }
-            OrderSort::Time => {
-                self.entries.sort_by(|a, b| a.date_time.cmp(&b.date_time));
-            }
-            OrderSort::Count => {
-                self.entries.sort_by(|a, b| a.count.cmp(&b.count));
+        } else {
+            match ordering {
+                OrderSort::Topic => {
+                    self.entries.sort_by(|a, b| a.topic.cmp(&b.topic));
+                }
+                OrderSort::Value => {
+                    self.entries.sort_by(|a, b| a.value.cmp(&b.value));
+                }
+                OrderSort::Time => {
+                    self.entries.sort_by(|a, b| a.date_time.cmp(&b.date_time));
+                }
+                OrderSort::Count => {
+                    self.entries.sort_by(|a, b| a.count.cmp(&b.count));
+                }
             }
         }
     }
-    
 }
 
 fn order_list(entry_list: &mut SubTable, ordering: OrderSort) {
@@ -99,7 +115,9 @@ fn order_list(entry_list: &mut SubTable, ordering: OrderSort) {
             entry_list.entries.sort_by(|a, b| a.value.cmp(&b.value));
         }
         OrderSort::Time => {
-            entry_list.entries.sort_by(|a, b| a.date_time.cmp(&b.date_time));
+            entry_list
+                .entries
+                .sort_by(|a, b| a.date_time.cmp(&b.date_time));
         }
         OrderSort::Count => {
             entry_list.entries.sort_by(|a, b| a.count.cmp(&b.count));

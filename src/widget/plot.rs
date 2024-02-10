@@ -58,7 +58,7 @@ impl Widget for Plot {
             .show_axes(true)
             .show_grid(true);
         let layout = Layout::top_down(Align::LEFT);
-        info!("Plot {} : {:?}", self.label, self.rect);
+    //    info!("Plot {} : {:?}", self.label, self.rect);
         let mut child_ui = ui.child_ui(self.rect, layout);
         let _r  = pl.show(&mut child_ui, |plot_ui| {
             plot_ui.line(line);

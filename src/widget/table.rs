@@ -21,6 +21,7 @@ pub struct Table {
     expire_time: Instant,
     expire_duration: Duration,
     regex: Regex,
+    reverse:bool,
 }
 
 impl Widget for Table {
@@ -35,7 +36,7 @@ impl Widget for Table {
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         let layout = Layout::top_down(Align::LEFT);
-        info!("Plot {} : {:?}", self.label, self.rect);
+  //      info!("Plot {} : {:?}", self.label, self.rect);
         let mut child_ui = ui.child_ui(self.rect, layout);
         let mut style = egui::Style::default();
         style.visuals.override_text_color = Some(Color32::BLACK);
@@ -48,22 +49,26 @@ impl Widget for Table {
             .header(20.0, |mut header| {
                 header.col(|ui| {
                     if ui.heading("Count").clicked() {
-                        self.table.order(OrderSort::Count);
+                        self.table.order(OrderSort::Count,self.reverse);
+                        self.reverse = !self.reverse;
                     };
                 });
                 header.col(|ui| {
                     if ui.heading("Time").clicked() {
-                        self.table.order(OrderSort::Time);
+                        self.table.order(OrderSort::Time,self.reverse);
+                        self.reverse = !self.reverse;
                     };
                 });
                 header.col(|ui| {
                     if ui.heading("Topic").clicked() {
-                        self.table.order(OrderSort::Topic);
+                        self.table.order(OrderSort::Topic,self.reverse);
+                        self.reverse = !self.reverse;
                     };
                 });
                 header.col(|ui| {
                     if ui.heading("Value").clicked() {
-                        self.table.order(OrderSort::Value);
+                        self.table.order(OrderSort::Value,self.reverse);
+                        self.reverse = !self.reverse;
                     };
                 });
             });
@@ -110,6 +115,7 @@ impl Table {
             expire_time: Instant::now() + expire_duration,
             expire_duration,
             regex: Regex::new(src_pattern.as_str()).unwrap(),
+            reverse:false,
         }
     }
 }
