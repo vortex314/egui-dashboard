@@ -2,7 +2,10 @@ extern crate log;
 use fred::clients::RedisClient;
 use fred::error::RedisError;
 use fred::interfaces::{ClientLike, EventInterface, PubsubInterface};
-use fred::types::{Blocking, MultipleStrings, ReconnectPolicy, RedisConfig, RespVersion, ServerConfig, TracingConfig};
+use fred::types::{
+    Blocking, MultipleStrings, ReconnectPolicy, RedisConfig, RespVersion, ServerConfig,
+    TracingConfig,
+};
 use log::{debug, error, info, trace, warn};
 use serde_yaml::Value;
 
@@ -24,30 +27,29 @@ pub async fn redis(
     url: &str,
     publish_sender: Sender<PubSubEvent>,
     cmd_receiver: &mut Receiver<PubSubCmd>,
-) -> Result<(), Error> {
+) -> Result<(), String> {
     info!("Redis config {:?} ", url);
     let mut config = RedisConfig::default();
-    let reconnect_policy = ReconnectPolicy::Exponential {
+    let reconnect_policy = ReconnectPolicy::Constant {
         attempts: 10,
-        max_attempts: 10,
-        min_delay: 1,
-        max_delay: 1000,
-        mult: 2,
+        max_attempts: 0,
+        delay: 100,
         jitter: 3,
     };
     config.server = ServerConfig::new_centralized("limero.ddns.net", 6379);
     config.tracing = TracingConfig::default();
-    config.tracing.enabled=true;
+    config.tracing.enabled = true;
     config.version = RespVersion::RESP3;
     config.blocking = Blocking::default();
-
 
     let client = RedisClient::new(config, None, None, Some(reconnect_policy));
     let client_clone = client.clone();
 
-   // let task  = client.init().await.unwrap();
+    // let task  = client.init().await.unwrap();
     info!("redis connecting ... ");
-    tokio::spawn( async move{ let _r = client_clone.connect();});
+    tokio::spawn(async move {
+        let _r = client_clone.connect();
+    });
     info!("redis connected ");
     let patterns = MultipleStrings::from(vec!["*"]);
     client.psubscribe(patterns).await.unwrap();
@@ -58,10 +60,12 @@ pub async fn redis(
             msg.channel,
             msg.value.as_string()
         );
-        let _ = publish_sender.try_send(PubSubEvent::Publish {
-            topic: msg.channel.to_string(),
-            message: msg.value.as_string().unwrap(),
-        }).unwrap();
+        let _ = publish_sender
+            .try_send(PubSubEvent::Publish {
+                topic: msg.channel.to_string(),
+                message: msg.value.as_string().unwrap(),
+            })
+            .unwrap();
         Ok(())
     });
     loop {
@@ -90,7 +94,8 @@ pub async fn redis(
             }
         }
     }
-    Ok(())
+
+    Err("lost connection ".to_string())
 }
 /*
 async fn redis_publish_received(url: &str, mut tx_publish_received: Sender<PubSubEvent>) {

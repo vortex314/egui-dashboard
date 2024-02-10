@@ -1,3 +1,4 @@
+use crate::store::sub_table::OrderSort;
 use crate::store::*;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
@@ -42,26 +43,34 @@ impl Widget for Table {
         let mut builder = TableBuilder::new(&mut child_ui)
             .column(Column::initial(60.0))
             .column(Column::initial(80.0))
-            .column(Column::initial(160.0))
-            .column(Column::remainder())
+            .column(Column::initial(160.0).resizable(true))
+            .column(Column::remainder().resizable(true))
             .header(20.0, |mut header| {
                 header.col(|ui| {
-                    ui.heading("Count");
+                    if ui.heading("Count").clicked() {
+                        self.table.order(OrderSort::Count);
+                    };
                 });
                 header.col(|ui| {
-                    ui.heading("Time");
+                    if ui.heading("Time").clicked() {
+                        self.table.order(OrderSort::Time);
+                    };
                 });
                 header.col(|ui| {
-                    ui.heading("Topic");
+                    if ui.heading("Topic").clicked() {
+                        self.table.order(OrderSort::Topic);
+                    };
                 });
                 header.col(|ui| {
-                    ui.heading("Value");
+                    if ui.heading("Value").clicked() {
+                        self.table.order(OrderSort::Value);
+                    };
                 });
             });
 
         builder.body(|mut body| {
             self.table.entries.iter().for_each(|x| {
-                body.row(20.0, |mut row| {
+                body.row(15.0, |mut row| {
                     row.col(|ui| {
                         ui.label(x.count.to_string());
                     });
@@ -69,10 +78,12 @@ impl Widget for Table {
                         ui.label(x.date_time.clone().format("%H:%M:%S").to_string().as_str());
                     });
                     row.col(|ui| {
-                        ui.label(x.topic.as_str());
+                        //ui.label(x.topic.as_str());
+                        ui.add(egui::Label::new(x.topic.as_str()).truncate(true));
                     });
                     row.col(|ui| {
-                        ui.label(x.value.as_str());
+                        //  ui.label(x.value.as_str());
+                        ui.add(egui::Label::new(x.value.as_str()).truncate(true));
                     });
                 });
             });

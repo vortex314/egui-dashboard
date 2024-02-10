@@ -71,6 +71,23 @@ impl SubTable {
         }
         None
     }
+    pub fn order(&mut self,ordering: OrderSort) {
+        match ordering {
+            OrderSort::Topic => {
+                self.entries.sort_by(|a, b| a.topic.cmp(&b.topic));
+            }
+            OrderSort::Value => {
+                self.entries.sort_by(|a, b| a.value.cmp(&b.value));
+            }
+            OrderSort::Time => {
+                self.entries.sort_by(|a, b| a.date_time.cmp(&b.date_time));
+            }
+            OrderSort::Count => {
+                self.entries.sort_by(|a, b| a.count.cmp(&b.count));
+            }
+        }
+    }
+    
 }
 
 fn order_list(entry_list: &mut SubTable, ordering: OrderSort) {

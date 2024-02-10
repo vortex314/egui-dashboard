@@ -83,7 +83,7 @@ async fn main() -> () {
 
 
 // redis receiver thread >> publish_sender
-    thread::spawn(move || {
+    /*thread::spawn(move || {
         let result = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -91,6 +91,21 @@ async fn main() -> () {
             .block_on(async {
                 redis(
                     "redis://limero.ddns.net:6379",
+                    publish_sender.clone(),
+                    &mut cmd_receiver,
+                )
+                .await
+            });
+    });*/
+
+    thread::spawn(move || {
+        let result = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                mqtt(
+                    "mqtt://192.168.0.40:1883",
                     publish_sender,
                     &mut cmd_receiver,
                 )
@@ -144,8 +159,7 @@ impl eframe::App for DashboardApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let causes = ctx.repaint_causes();
-        info!(" repaint causes {:?}",causes);
+
         ctx.set_visuals(egui::Visuals::light());
 
         egui::CentralPanel::default().show(ctx, |ui| {

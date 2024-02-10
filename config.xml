@@ -20,7 +20,7 @@
         <Slider h="40" w="600"  label="Voltage" unit="V" src="src/esp32/sys/heap" dst="src/esp32/sys/heap" min="0.0" max="50000.0" step="10.0" />
         <Progress h="30" w="600" label="Voltage" unit="V" src="src/esp32/sys/heap" min="0.0" max="50000.0" />
         <Plot h="200" w="500"  label="Voltage" unit="V" src="src/esp32/sys/heap" min="0.0" max="5.0" timespan="10000" samples="1000"/>
-        <Table h="300" w="1000" src="src/.*" label="ESP32" timeout="10000" />
+        <Table h="300" w="1000" src=".*" label="ESP32" timeout="10000" />
         <ValueOutput label="Voltage" w="500" unit="V" prefix="$" src="src/esp32/sys/voltage" />
         <Map label="Location" image="img/map.png" w="500" src="src/esp32/sys/location" />
         <Compass h="100" label="direction" src="src/esp32/sys/compass" />
