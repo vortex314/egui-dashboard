@@ -29,73 +29,76 @@ pub async fn redis(
     cmd_receiver: &mut Receiver<PubSubCmd>,
 ) -> Result<(), String> {
     info!("Redis config {:?} ", url);
-    let mut config = RedisConfig::default();
-    let reconnect_policy = ReconnectPolicy::Constant {
-        attempts: 10,
-        max_attempts: 0,
-        delay: 100,
-        jitter: 3,
-    };
-    config.server = ServerConfig::new_centralized("limero.ddns.net", 6379);
-    config.tracing = TracingConfig::default();
-    config.tracing.enabled = true;
-    config.version = RespVersion::RESP3;
-    config.blocking = Blocking::default();
-
-    let client = RedisClient::new(config, None, None, Some(reconnect_policy));
-    let client_clone = client.clone();
-
-    // let task  = client.init().await.unwrap();
-    info!("redis connecting ... ");
-    tokio::spawn(async move {
-        let _r = client_clone.connect();
-    });
-    info!("redis connected ");
-    let patterns = MultipleStrings::from(vec!["*"]);
-    client.psubscribe(patterns).await.unwrap();
-    info!("redis subscribed ");
-    client.on_message(move |msg| {
-        debug!(
-            "Publish received topic: {} => {:?} ",
-            msg.channel,
-            msg.value.as_string()
-        );
-        let _ = publish_sender
-            .try_send(PubSubEvent::Publish {
-                topic: msg.channel.to_string(),
-                message: msg.value.as_string().unwrap(),
-            })
-            .unwrap();
-        Ok(())
-    });
     loop {
-        select! {
-            cmd = cmd_receiver.recv() => {
-                match cmd {
-                    Some(cmd) => {
-                        info!("PubSubCmd {:?}", cmd);
-                        match cmd {
-                            PubSubCmd::Unsubscribe { pattern } => {
-                                let _r = client.punsubscribe(pattern).await;
-                            }
-                            PubSubCmd::Publish { topic, message } => {
-                               let r:Result<String,RedisError> = client.publish(topic, message).await;
-                            }
-                            PubSubCmd::Subscribe { pattern } => {
-                                let _r = client.psubscribe(pattern).await;
+        let mut config = RedisConfig::default();
+        let reconnect_policy = ReconnectPolicy::Constant {
+            attempts: 10,
+            max_attempts: 0,
+            delay: 100,
+            jitter: 3,
+        };
+        config.server = ServerConfig::new_centralized("limero.ddns.net", 6379);
+        config.tracing = TracingConfig::default();
+        config.tracing.enabled = true;
+        config.version = RespVersion::RESP3;
+        config.blocking = Blocking::default();
+
+        let client = RedisClient::new(config, None, None, Some(reconnect_policy));
+        let client_clone = client.clone();
+
+        // let task  = client.init().await.unwrap();
+        info!("redis connecting ... ");
+        tokio::spawn(async move {
+            let _r = client_clone.connect();
+        });
+        info!("redis connected ");
+        let patterns = MultipleStrings::from(vec!["*"]);
+        client.psubscribe(patterns).await.unwrap();
+        info!("redis subscribed ");
+        client.on_message(move |msg| {
+            debug!(
+                "Publish received topic: {} => {:?} ",
+                msg.channel,
+                msg.value.as_string()
+            );
+            let _ = publish_sender
+                .try_send(PubSubEvent::Publish {
+                    topic: msg.channel.to_string(),
+                    message: msg.value.as_string().unwrap(),
+                })
+                .unwrap();
+            Ok(())
+        });
+        loop {
+            select! {
+                cmd = cmd_receiver.recv() => {
+                    match cmd {
+                        Some(cmd) => {
+                            info!("PubSubCmd {:?}", cmd);
+                            match cmd {
+                                PubSubCmd::Unsubscribe { pattern } => {
+                                    let _r = client.punsubscribe(pattern).await;
+                                }
+                                PubSubCmd::Publish { topic, message } => {
+                                   let r:Result<String,RedisError> = client.publish(topic, message).await;
+                                }
+                                PubSubCmd::Subscribe { pattern } => {
+                                    let _r = client.psubscribe(pattern).await;
+                                }
                             }
                         }
-                    }
-                    None => {
-                        info!("rx_cmd closed");
-                        break;
+                        None => {
+                            info!("rx_cmd closed");
+                            break;
+                        }
                     }
                 }
             }
         }
-    }
 
-    Err("lost connection ".to_string())
+        Err("lost connection ".to_string())
+        client.disconnect();
+    }
 }
 /*
 async fn redis_publish_received(url: &str, mut tx_publish_received: Sender<PubSubEvent>) {
