@@ -30,6 +30,7 @@ pub async fn redis(
 ) -> Result<(), String> {
     info!("Redis config {:?} ", url);
     loop {
+        let publish_sender = publish_sender.clone();
         let mut config = RedisConfig::default();
         let reconnect_policy = ReconnectPolicy::Constant {
             attempts: 10,
@@ -95,9 +96,9 @@ pub async fn redis(
                 }
             }
         }
+    //    client.disconnect();
 
-        Err("lost connection ".to_string())
-        client.disconnect();
+        warn!("lost connection ");
     }
 }
 /*

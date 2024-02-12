@@ -105,7 +105,7 @@ async fn main() -> () {
             .unwrap()
             .block_on(async {
                 mqtt(
-                    "mqtt://192.168.0.40:1883",
+                    "mqtt://limero.ddns.net:1883",
                     publish_sender,
                     &mut cmd_receiver,
                 )
