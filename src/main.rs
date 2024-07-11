@@ -140,6 +140,7 @@ async fn main() -> () {
     }); 
     tokio::spawn(async move {
         dashboard_message_handler.run().await;
+
     });
 
 
