@@ -1,3 +1,4 @@
+use crate::payload_decode;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
 use crate::widget::WidgetResult;
@@ -19,12 +20,12 @@ pub struct Gauge {
 }
 
 impl Widget for Gauge {
-    fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
         self.expire_time = Instant::now() + self.expire_duration;
-        self.value = payload.parse().unwrap_or(0.0);
+        self.value = payload_decode(payload).unwrap_or(self.min);
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut egui::Ui) -> Result<(), String> {

@@ -30,7 +30,7 @@ pub struct Status {
 impl Widget for Status {
 
 
-    fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }

@@ -63,7 +63,7 @@ pub async fn redis(
         let _ = publish_sender
             .try_send(PubSubEvent::Publish {
                 topic: msg.channel.to_string(),
-                message: msg.value.as_string().unwrap(),
+                message: msg.value.as_bytes().unwrap(),
             })
             .unwrap();
         Ok(())
@@ -75,14 +75,14 @@ pub async fn redis(
                     Some(cmd) => {
                         info!("PubSubCmd {:?}", cmd);
                         match cmd {
-                            PubSubCmd::Unsubscribe { pattern } => {
-                                let _r = client.punsubscribe(pattern).await;
+                            PubSubCmd::Unsubscribe { topic } => {
+                                let _r = client.punsubscribe(topic).await;
                             }
                             PubSubCmd::Publish { topic, message } => {
                                let r:Result<String,RedisError> = client.publish(topic, message).await;
                             }
-                            PubSubCmd::Subscribe { pattern } => {
-                                let _r = client.psubscribe(pattern).await;
+                            PubSubCmd::Subscribe { topic } => {
+                                let _r = client.psubscribe(topic).await;
                             }
                         }
                     }
@@ -173,9 +173,9 @@ async fn redis_cmd_received(url: &str, mut rx_redis_cmd: Receiver<PubSubCmd>) {
         while let Some(cmd) = rx_redis_cmd.recv().await {
             info!("PubSubCmd {:?}", cmd);
             match cmd {
-                PubSubCmd::Unsubscribe { pattern } => {
+                PubSubCmd::Unsubscribe { topic } => {
                     let _: () = redis::cmd("PUNSUBSCRIBE")
-                        .arg(pattern)
+                        .arg(topic)
                         .query_async(&mut publish_conn)
                         .await
                         .unwrap();
@@ -188,9 +188,9 @@ async fn redis_cmd_received(url: &str, mut rx_redis_cmd: Receiver<PubSubCmd>) {
                         .await
                         .unwrap();
                 }
-                PubSubCmd::Subscribe { pattern } => {
+                PubSubCmd::Subscribe { topic } => {
                     let _: () = redis::cmd("PSUBSCRIBE")
-                        .arg(pattern)
+                        .arg(topic)
                         .query_async(&mut publish_conn)
                         .await
                         .unwrap();
@@ -208,14 +208,14 @@ async fn handle_cmds(
     while let Some(cmd) = cmd_channel.recv().await {
         info!("PubSubCmd {:?}", cmd);
         match cmd {
-            PubSubCmd::Unsubscribe { pattern } => {
-                let _r = sub_connection.punsubscribe(pattern).await;
+            PubSubCmd::Unsubscribe { topic } => {
+                let _r = sub_connection.punsubscribe(topic).await;
             }
             PubSubCmd::Publish { topic, message } => {
                 let _r = pub_connection.publish(topic, message).await;
             }
-            PubSubCmd::Subscribe { pattern } => {
-                let _r = sub_connection.psubscribe(pattern).await;
+            PubSubCmd::Subscribe { topic } => {
+                let _r = sub_connection.psubscribe(topic).await;
             }
         }
     }

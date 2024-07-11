@@ -1,3 +1,7 @@
+use crate::limero::SinkRef;
+use crate::limero::SinkTrait;
+use crate::payload_decode;
+use crate::payload_encode;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
 use crate::widget::WidgetResult;
@@ -14,7 +18,7 @@ pub struct Slider {
     label: String,
     src_topic: String,
     dst_topic: String,
-    cmd_sender: Sender<PubSubCmd>,
+    cmd_sender: SinkRef<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
     min: f64,
@@ -24,11 +28,11 @@ pub struct Slider {
 }
 
 impl Widget for Slider {
-    fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
-        match payload.parse() {
+        match payload_decode(payload)  {
             Ok(v) => {
                 self.value = v;
                 WidgetResult::Update
@@ -50,9 +54,9 @@ impl Widget for Slider {
             )
             .changed()
         {
-            let _r = self.cmd_sender.try_send(PubSubCmd::Publish {
+            let _r = self.cmd_sender.push(PubSubCmd::Publish {
                 topic: self.dst_topic.clone(),
-                message: self.value.to_string(),
+                message: payload_encode::<String>(self.value.to_string()),
             });
         };
 
@@ -61,7 +65,7 @@ impl Widget for Slider {
 }
 
 impl Slider {
-    pub fn new(rect: Rect, config: &Tag, cmd_sender: Sender<PubSubCmd>) -> Self {
+    pub fn new(rect: Rect, config: &Tag, cmd_sender: SinkRef<PubSubCmd>) -> Self {
         let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
         Self {
             rect,

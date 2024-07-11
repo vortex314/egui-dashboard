@@ -36,8 +36,8 @@ use tokio::time::{self, Duration};
 use tokio_stream::StreamExt;
 
 use logger::*;
-use pubsub::mqtt_bridge::mqtt;
-use pubsub::redis_bridge::redis;
+//use pubsub::mqtt_bridge::mqtt;
+//use pubsub::redis_bridge::redis;
 use pubsub::*;
 
 use widget::button::Button;
@@ -53,6 +53,53 @@ use widget::tag::Tag;
 use widget::Widget;
 
 use clap::Parser;
+mod zenoh_pubsub;
+use zenoh_pubsub::*;
+mod limero;
+use limero::*;
+use limero::ActorTrait;
+use limero::SinkRef;
+use limero::SinkTrait;
+
+struct MessageHandler {
+    dashboard: Arc<Mutex<Dashboard>>,
+    cmds : Sink<PubSubEvent>,
+}
+
+impl MessageHandler {
+    fn new(dashboard: Arc<Mutex<Dashboard>>) -> Self {
+        Self {
+            dashboard,
+            cmds : Sink::new(100)
+        }
+    }
+}
+
+
+impl ActorTrait<PubSubEvent, ()> for MessageHandler {
+    async fn run(&mut self) {
+        loop {
+            let x = self.cmds.next().await;
+            match x {
+                Some(cmd) => {
+                    match cmd {
+                        PubSubEvent::Publish { topic, message } => {
+                            self.dashboard.lock().unwrap().on_message(PubSubEvent::Publish { topic, message });
+                        }
+                        _ => {}
+                    }
+                }
+                None => {
+                    warn!("Error in recv : None ");
+                }
+            }
+        }
+    }
+    fn sink_ref(&self) -> SinkRef<PubSubEvent> {
+        self.cmds.sink_ref()
+    }
+}
+
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
@@ -72,67 +119,29 @@ async fn main() -> () {
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
     info!("Starting up. Reading config file {}.", &args.config);
-    let (mut publish_sender, mut publish_receiver) = channel::<PubSubEvent>(16);
-    let (mut cmd_sender, mut cmd_receiver) = channel::<PubSubCmd>(16);
+
+    let mut pubsub = PubSubActor::new();
+    pubsub.sink_ref().push(PubSubCmd::Subscribe { topic : "**".to_string()} );
 
     let mut dashboard_config = Box::new(load_xml_file(&args.config).unwrap());
     let dashboard_title = dashboard_config.label.clone().unwrap_or(String::from("Dashboard"));
     let dashboard = Arc::new(Mutex::new(Dashboard::new()));
-    let _r = dashboard.lock().unwrap().load(&mut dashboard_config, cmd_sender.clone()).unwrap();
+    let _r = dashboard.lock().unwrap().load(&mut dashboard_config, pubsub.sink_ref()).unwrap();
     let mut db_clone = dashboard.clone();
 
+    let mut dashboard_message_handler = MessageHandler::new(dashboard.clone());
 
-// redis receiver thread >> publish_sender
-    /*thread::spawn(move || {
-        let result = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                redis(
-                    "redis://limero.ddns.net:6379",
-                    publish_sender.clone(),
-                    &mut cmd_receiver,
-                )
-                .await
-            });
-    });*/
 
-    thread::spawn(move || {
-        let result = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                mqtt(
-                    "mqtt://192.168.0.40:1883",
-                    publish_sender,
-                    &mut cmd_receiver,
-                )
-                .await
-            });
+
+    pubsub.add_listener(dashboard_message_handler.sink_ref());
+
+    tokio::spawn(async move {
+        pubsub.run().await;
+    }); 
+    tokio::spawn(async move {
+        dashboard_message_handler.run().await;
     });
-// publish receiver >> dashboard
-    thread::spawn(move || {
-        let result = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async move  {
-                loop {
-                    let x = publish_receiver.recv().await;
-                    match x {
-                        Some(m) => {
-                            info!("Received message {:?}", m);
-                            db_clone.lock().unwrap().on_message(m);
-                        },
-                        None => {
-                            warn!("Error in recv : None ");
-                        }
-                    }
-                }
-            });
-    });
+
 
     let mut app = DashboardApp::new(dashboard);
     let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
@@ -166,7 +175,7 @@ impl eframe::App for DashboardApp {
             self.dashboard.lock().unwrap().draw(ui);
         });
 
-        ctx.request_repaint_after(Duration::from_millis(1000)); // update timed out widgets
+        ctx.request_repaint_after(Duration::from_millis(10)); // update timed out widgets
     }
 }
 
@@ -188,16 +197,17 @@ impl Dashboard {
         match message {
             PubSubEvent::Publish { topic, message } => {
                 for widget in self.widgets.iter_mut() {
-                    if widget.on_message(topic.as_str(), message.as_str()) == WidgetResult::Update {
+                    if widget.on_message(topic.as_str(), &message) == WidgetResult::Update {
                         repaint = true
                     };
                 }
             }
+            _ => {}
         }
         repaint
     }
 
-    fn load(&mut self, cfg: &Tag, cmd_sender: Sender<PubSubCmd>) -> Result<(), String> {
+    fn load(&mut self, cfg: &Tag, cmd_sender: SinkRef<PubSubCmd>) -> Result<(), String> {
         if cfg.name != "Dashboard" {
             return Err("Invalid config file. Missing Dashboard tag.".to_string());
         }
@@ -224,7 +234,7 @@ impl Dashboard {
 fn load_widgets(
     rect: egui::Rect,
     cfg: &Tag,
-    cmd_sender: Sender<PubSubCmd>,
+    cmd_sender: SinkRef<PubSubCmd>,
 ) -> Vec<Box<dyn Widget + Send >> {
     let mut widgets: Vec<Box<dyn Widget+Send>> = Vec::new();
     let mut rect = rect;

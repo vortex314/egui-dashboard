@@ -1,3 +1,4 @@
+use crate::payload_decode;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
 use crate::widget::WidgetResult;
@@ -19,11 +20,11 @@ pub struct Label {
 }
 
 impl Widget for Label {
-    fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
-        self.label = payload.to_string();
+        self.label = payload_decode(payload).unwrap_or("---".to_string());
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {

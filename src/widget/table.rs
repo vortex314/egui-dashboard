@@ -1,3 +1,4 @@
+use crate::payload_display;
 use crate::store::sub_table::OrderSort;
 use crate::store::*;
 use crate::widget::tag::Tag;
@@ -7,6 +8,9 @@ use egui::containers::Frame;
 use egui::*;
 use egui_extras::{Column, TableBuilder};
 use regex::Regex;
+use egui::TextStyle::Body;
+use egui::FontFamily::Proportional;
+use egui::TextStyle::Heading;
 
 use log::info;
 use std::time::Duration;
@@ -25,10 +29,9 @@ pub struct Table {
 }
 
 impl Widget for Table {
-    fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
         if self.regex.is_match(topic) {
-            self.table.add(topic.to_string(), payload.to_string());
-            info!("Table added {} {} ", topic, payload);
+            self.table.add(topic.to_string(), payload_display(&payload));
             WidgetResult::Update
         } else {
             WidgetResult::NoEffect
@@ -39,6 +42,9 @@ impl Widget for Table {
   //      info!("Plot {} : {:?}", self.label, self.rect);
         let mut child_ui = ui.child_ui(self.rect, layout);
         let mut style = egui::Style::default();
+        // small font
+        style.text_styles.insert(Body, FontId::new(12.0, Proportional));
+        style.text_styles.insert(Heading, FontId::new(12.0, Proportional));
         style.visuals.override_text_color = Some(Color32::BLACK);
         child_ui.set_style(style);
         let mut builder = TableBuilder::new(&mut child_ui)

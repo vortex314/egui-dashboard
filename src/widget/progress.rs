@@ -1,3 +1,4 @@
+use crate::payload_decode;
 use crate::widget::rect_border;
 use crate::widget::tag::Tag;
 use crate::widget::Widget;
@@ -21,17 +22,12 @@ pub struct Progress {
 }
 
 impl Widget for Progress {
-    fn on_message(&mut self, topic: &str, payload: &str) -> WidgetResult {
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
-        info!(
-            "Progress {} : {} = {}",
-            topic,
-            payload,
-            payload.parse().unwrap_or(0.0)
-        );
-        self.value = payload.parse().unwrap_or(self.min);
+
+        self.value = payload_decode(payload).unwrap_or(self.min);
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {

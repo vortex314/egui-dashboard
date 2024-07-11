@@ -17,13 +17,16 @@ simplelog = "*" # for logging
 env_logger = "0.11.0"
 # redis = { git = "https://github.com/redis-rs/redis-rs", branch = "resp3",features = ["tokio-comp"] }
 # redis = { version="0.24.0" ,features=[]} 
-fred = { version="8.0.1",features=["full-tracing"]}
+fred = { version="9.0.3",features=["full-tracing"]}
 chrono = "0.4.19" # for time
 mqtt-async-client = "0.3.1" # for mqtt
-tokio = { version = "1", features = ["full"] }
-tokio-stream = { version = "0.1", features = ["full"] }
+tokio = { version = "*", features = ["full"] }
+tokio-stream = { version = "*", features = ["full"] }
+tokio-util = { version ="0.7",default_features=false,features = ["codec"] }
 regex = "*"
 serde = { version="1.0",features = ["derive"]} 
 serde_yaml = "0.9.21" # for a yaml description
 serde-xml-rs = { version="0.6.0" }
 minidom="*"
+zenoh = { version="*" }
+minicbor = { version = "*", features=["derive","alloc","half"] }
