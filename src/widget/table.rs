@@ -44,7 +44,7 @@ impl Widget for Table {
         let mut style = egui::Style::default();
         // small font
         style.text_styles.insert(Body, FontId::new(12.0, Proportional));
-        style.text_styles.insert(Heading, FontId::new(12.0, Proportional));
+        style.text_styles.insert(Heading, FontId::new(14.0, Proportional));
         style.visuals.override_text_color = Some(Color32::BLACK);
         child_ui.set_style(style);
         let mut builder = TableBuilder::new(&mut child_ui)

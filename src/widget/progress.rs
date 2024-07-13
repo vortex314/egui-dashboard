@@ -27,7 +27,7 @@ impl Widget for Progress {
             return WidgetResult::NoEffect;
         }
 
-        self.value = payload_decode(payload).unwrap_or(self.min);
+        self.value = payload_decode::<f64>(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
@@ -36,7 +36,7 @@ impl Widget for Progress {
         ui.put(
             rect_border(rect),
             egui::ProgressBar::new(self.fraction(self.value))
-                .fill(Color32::BLUE)
+                .fill(Color32::RED)
                 .rounding(Rounding::ZERO)
                 .desired_height(rect.height())
                 .desired_width(rect.width())

@@ -9,7 +9,6 @@ edition = "2021"
 clap = { version="4.0.8", features=["derive"]}
 eframe = "0.26.0"
 egui = { version="0.26.0",features=["callstack"]}
-egui_gauge = { path="../egui_gauge" }
 egui_extras={ version="0.26.0",features=[]}
 egui_plot = { version="0.26.0",features=[]} 
 log = "0.4.14" # for logging
@@ -30,3 +29,4 @@ serde-xml-rs = { version="0.6.0" }
 minidom="*"
 zenoh = { version="*" }
 minicbor = { version = "*", features=["derive","alloc","half"] }
+notify = "6.1.1"

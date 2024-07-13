@@ -123,7 +123,7 @@ fn get_tag(element: &Element) -> Option<Tag> {
 }
 
 impl Tag {
-    fn new(name:String) -> Self {
+    pub fn new(name:String) -> Self {
         Self {
             name,
             label: None,
@@ -159,8 +159,15 @@ pub fn load_xml_file(path: &str) -> Option<Tag>{
     let mut contents = String::new();
     file.read_to_string(&mut contents)
         .expect("Unable to read file ");
-    let root: minidom::Element = contents.parse().unwrap();
-    get_tag(&root)
+    let res = contents.parse::<Element>();
+    match res {
+        Ok(root) => get_tag(&root),
+        Err(e) => {
+            error!("Error parsing xml file: {}", e);
+            None
+        }
+    
+    }
 }
 
 pub fn split_underscore(str: &String) -> (Option<&str>, Option<&str>) {

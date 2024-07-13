@@ -29,7 +29,7 @@ impl Widget for Plot {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
-        self.value = payload_decode(payload).unwrap_or(self.min);
+        self.value = payload_decode::<f64>(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
         self.timeseries.add(Instant::now(), self.value);
         WidgetResult::Update
     }

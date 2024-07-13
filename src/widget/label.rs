@@ -17,6 +17,7 @@ pub struct Label {
     src_topic: String,
     expire_time: Instant,
     expire_duration: Duration,
+    text: String,
 }
 
 impl Widget for Label {
@@ -24,14 +25,15 @@ impl Widget for Label {
         if self.src_topic != topic {
             return WidgetResult::NoEffect;
         }
-        self.label = payload_decode(payload).unwrap_or("---".to_string());
+        let f = payload_decode::<f64>(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(0u64 ) as f64);
+        self.text = format!("{} {}",  self.label, f);
         WidgetResult::Update
     }
     fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
         ui.put(
             self.rect,
             egui::widgets::Label::new(
-                egui::RichText::new(self.label.clone())
+                egui::RichText::new(self.text.clone())
                     .size(self.text_size as f32)
                     .color(Color32::BLACK),
             ),
@@ -50,6 +52,7 @@ impl Label {
             src_topic: config.src.as_ref().unwrap_or(&String::from("")).clone(),
             expire_time: Instant::now() + expire_duration,
             expire_duration,
+            text: String::new(),
         }
     }
 }

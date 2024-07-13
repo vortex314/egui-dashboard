@@ -9,7 +9,7 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "RUST_BACKTRACE": "1"
+                    "RUST_BACKTRACE": "full"
                 }
             },
             "command": "~/.cargo/bin/cargo", // note: full path to the cargo
