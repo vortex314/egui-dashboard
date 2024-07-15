@@ -14,10 +14,8 @@ use crate::limero::Sink;
 use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::Source;
-use crate::payload_display;
 use crate::ActorTrait;
 use crate::SourceTrait;
-
 
 
 use minicbor::display;
@@ -25,6 +23,7 @@ use zenoh::open;
 use zenoh::prelude::r#async::*;
 use zenoh::subscriber::Subscriber;
 use crate::pubsub::{PubSubCmd, PubSubEvent};
+use crate::pubsub::payload_display;
 
 
 pub struct PubSubActor {

@@ -5,24 +5,68 @@
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 use eframe::egui;
-use log;
+use log::{self, info};
 mod logger;
 use logger::*;
-use std::env;
-
+use std::{env, sync::Arc};
+use std::sync::Mutex;
 mod pubsub;
-use pubsub::payload_decode;
+use pubsub::{payload_decode, payload_display};
+mod zenoh_pubsub;
+use zenoh_pubsub::PubSubActor;
+use crate::pubsub::{PubSubCmd, PubSubEvent};
+
+mod limero;
+use limero::*;
 
 mod win_status;
 use win_status::*;
 
-fn main() -> eframe::Result<()> {
+mod win_menu;
+use win_menu::*;
+
+
+#[tokio::main(flavor = "multi_thread", worker_threads = 2)]
+async fn main() -> eframe::Result<()> {
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
+
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
     };
+
+    let mut app = Box::<MyApp>::default();
+    app.windows.try_lock().ok().unwrap().push(Box::new(WinStatus::new()));
+    app.windows.try_lock().ok().unwrap().push(Box::new(WinMenu::new()));
+    let mut windows = app.windows().clone();
+
+    let mut pubsub = PubSubActor::new();
+    pubsub.sink_ref().push(PubSubCmd::Subscribe {
+        topic: "**".to_string(),
+    });
+    pubsub.for_all( Box::new(
+       move  |event| {
+            match event {
+                PubSubEvent::Publish { topic, message } => {
+                    info!("Publish {} {}", topic, payload_display(&message));
+                    windows.lock().map(|mut windows| {
+                        for window in windows.iter_mut() {
+                            window.on_message(&topic, &message);
+                        }
+                    }).unwrap();
+
+                },
+                _  => {},
+            }
+        }
+    ));
+
+    tokio::spawn(async move {
+        pubsub.run().await;
+    });
+
     eframe::run_native(
         "Custom Keypad App",
         options,
@@ -32,9 +76,7 @@ fn main() -> eframe::Result<()> {
             // This gives us image support:
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
-            let status_window = WinStatus::new();
-            let mut app = Box::<MyApp>::default();
-            app.windows.push(Box::new(status_window));
+
 
             app
         }),
@@ -47,45 +89,30 @@ trait PubSubWindow {
 }
 
 struct MyApp {
-    name: String,
-    age: u32,
-    windows: Vec<Box<dyn PubSubWindow>>,
+    windows: Arc<Mutex<Vec<Box<dyn PubSubWindow + Send >>>>,
 }
 
-impl MyApp {}
+impl MyApp {
+    fn windows(&self) -> Arc<Mutex<Vec<Box<dyn PubSubWindow + Send >>>> {
+        self.windows.clone()
+    }
+}
 
 impl Default for MyApp {
     fn default() -> Self {
         Self {
-            name: "Arthur".to_owned(),
-            age: 42,
-            windows: vec![],
+            windows: Arc::new(Mutex::new(Vec::<Box<dyn PubSubWindow + Send >>::new())),
         }
     }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        for window in self.windows.iter_mut() {
-            window.on_message("Hi", &Vec::<u8>::new());
-            window.show(ctx);
+       let l = self.windows.lock();
+        if let Ok(mut windows) = l {
+            for window in windows.iter_mut() {
+                window.show(ctx);
+            }
         }
-    /*     egui::Window::new("Custom Keypad")
-            .default_pos([100.0, 100.0])
-            .title_bar(true)
-            .show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label("Your name: ");
-                    ui.text_edit_singleline(&mut self.name);
-                });
-                ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
-                if ui.button("Increment").clicked() {
-                    self.age += 1;
-                }
-                ui.label(format!("Hello '{}', age {}", self.name, self.age));
-                
-            });*/
-
     }
-
 }

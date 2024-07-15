@@ -66,7 +66,6 @@ impl PubSubWindow for WinStatus {
                 .map(|rect| rect)
                 .unwrap()
         });
-        info!("New window pos: {:?}", self.rect);
     }
 
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
