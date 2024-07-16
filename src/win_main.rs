@@ -4,7 +4,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
+use clap::ColorChoice;
 use eframe::egui;
+use egui::Color32;
 use log::{self, info};
 mod logger;
 use logger::*;
@@ -25,13 +27,23 @@ use win_status::*;
 mod win_menu;
 use win_menu::*;
 
+mod win_topics;
+use win_topics::*;
+
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> eframe::Result<()> {
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
 
-
+    let my_frame = egui::containers::Frame {
+        inner_margin: egui::style::Margin { left: 10., right: 10., top: 10., bottom: 10. },
+        outer_margin: egui::style::Margin { left: 10., right: 10., top: 10., bottom: 10. },
+        rounding: egui::Rounding { nw: 1.0, ne: 1.0, sw: 1.0, se: 1.0 },
+        shadow: eframe::epaint::Shadow { extrusion: 1.0, color: Color32::YELLOW },
+        fill: Color32::LIGHT_BLUE,
+        stroke: egui::Stroke::new(2.0, Color32::GOLD),
+    };
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
@@ -39,7 +51,9 @@ async fn main() -> eframe::Result<()> {
 
     let mut app = Box::<MyApp>::default();
     app.windows.try_lock().ok().unwrap().push(Box::new(WinStatus::new()));
-    app.windows.try_lock().ok().unwrap().push(Box::new(WinMenu::new()));
+    let mut windows = app.windows().clone();
+
+    app.windows.try_lock().ok().unwrap().push(Box::new(WinMenu::new(windows)));
     let mut windows = app.windows().clone();
 
     let mut pubsub = PubSubActor::new();
@@ -68,11 +82,15 @@ async fn main() -> eframe::Result<()> {
     });
 
     eframe::run_native(
-        "Custom Keypad App",
+        "PubSub Dashboard",
         options,
         Box::new(|cc| {
             // Use the dark theme
-            cc.egui_ctx.set_visuals(egui::Visuals::light());
+            let mut visuals = egui::Visuals::light();
+            visuals.window_fill = Color32::LIGHT_BLUE;
+            visuals.panel_fill = Color32::LIGHT_BLUE;
+
+            cc.egui_ctx.set_visuals(visuals);
             // This gives us image support:
             egui_extras::install_image_loaders(&cc.egui_ctx);
 
@@ -84,12 +102,16 @@ async fn main() -> eframe::Result<()> {
 }
 
 trait PubSubWindow {
-    fn show(&mut self, ctx: &egui::Context);
+    fn show(&mut self, ctx: &egui::Context) -> Option<MyAppCmd>;
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>);
 }
 
 struct MyApp {
     windows: Arc<Mutex<Vec<Box<dyn PubSubWindow + Send >>>>,
+}
+
+pub enum MyAppCmd {
+    AddWindow(Box<dyn PubSubWindow + Send>),
 }
 
 impl MyApp {
@@ -110,8 +132,19 @@ impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
        let l = self.windows.lock();
         if let Ok(mut windows) = l {
+            let mut cmds = Vec::new();
             for window in windows.iter_mut() {
-                window.show(ctx);
+                let cmd =  window.show(ctx);
+                if let Some(cmd) = cmd {
+                    cmds.push(cmd);
+                }
+            };
+            for cmd in cmds {
+                match cmd {
+                    MyAppCmd::AddWindow(window) => {
+                        windows.push(window);
+                    }
+                }
             }
         }
     }

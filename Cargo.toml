@@ -39,3 +39,4 @@ minidom="*"
 zenoh = { version="*" }
 minicbor = { version = "*", features=["derive","alloc","half"] }
 notify = "6.1.1"
+rand="*"

@@ -1,5 +1,6 @@
 use std::convert::Infallible;
 
+use data::Int;
 use decode::Error;
 use log::info;
 //pub mod mqtt_bridge;
@@ -48,5 +49,25 @@ pub fn payload_display(v: &Vec<u8>) -> String {
         line
     } else {
         s
+    }
+}
+
+pub fn decode_f64 (payload: &Vec<u8>) -> f64 {
+    match payload_decode::<Int>(payload) {
+        Ok(value) => {
+            let v:i64 = value.try_into().unwrap();
+            v as f64
+        },
+        Err(_) => {
+            match payload_decode::<f32>(payload) {
+                Ok(value) => value as f64,
+                Err(_) => {
+                    match payload_decode::<f64>(payload) {
+                        Ok(value) => value,
+                        Err(_) => 0.0,
+                    }
+                },
+            }
+        }
     }
 }

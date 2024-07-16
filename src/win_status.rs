@@ -1,77 +1,140 @@
 use crate::payload_decode;
+use crate::pubsub::decode_f64;
+use crate::MyAppCmd;
 use crate::PubSubWindow;
 use egui::*;
 use log::info;
+use minicbor::data::Int;
+use rand::Rng;
 
 pub struct WinStatus {
     rect: Rect,
     pub title: String,
-    pub status: u32,
-    pub message: String,
+    pub src_topic: String,
+    pub suffix: String,
+    pub current_value: Option<f64>,
+    pub min_value: Option<f64>,
+    pub max_value: Option<f64>,
+    window_id: Id,
+    context_menu_id: Id,
 }
 
 impl WinStatus {
     pub fn new() -> Self {
+        let mut rng = rand::thread_rng();
+
         Self {
             rect: Rect::from_min_size([200.0, 200.0].into(), [300.0, 300.0].into()),
-            title: "Default Title".to_owned(),
-            status: 0,
-            message: String::new(),
+            title: "Latency".to_owned(),
+            src_topic: "src/esp32/sys/latency".to_owned(),
+            suffix: "msec".to_owned(),
+            current_value: None,
+            min_value: None,
+            max_value: None,
+            window_id: Id::new(format!("status_{}", rng.gen::<u32>())),
+            context_menu_id: Id::new(format!("context_menu_{}", rng.gen::<u32>())),
         }
+    }
+    fn context_menu(&mut self, ui: &mut Ui) {
+        let topics = vec![
+            "src/esp32/sys/uptime",
+            "src/esp32/sys/latency",
+            "src/esp32/sys/heap_free",
+            "src/esp32/sys/heap_used",
+        ];
+        ui.label("Context menu");
+        ui.horizontal(|ui| {
+            ui.label("Title: ");
+            ui.text_edit_singleline(&mut self.title);
+        });
+        ui.horizontal(|ui| {
+            ui.label("Suffix: ");
+            ui.text_edit_singleline(&mut self.suffix);
+        });
+        let mut topic_selected = self.src_topic.clone();
+        ui.horizontal(|ui| {
+            ui.label("Source topic: ");
+            egui::ComboBox::from_id_source("Source topic")
+                .selected_text(format!("{:?}", topic_selected))
+                .show_ui(ui, |ui| {
+                    for topic in topics.iter() {
+                        ui.selectable_value(
+                            &mut topic_selected,
+                            topic.to_string(),
+                            topic.to_string(),
+                        );
+                    }
+                })
+        });
+        if topic_selected != self.src_topic {
+            self.title = topic_selected.clone();
+            self.src_topic = topic_selected;
+            self.current_value = None;
+            self.min_value = None;
+            self.max_value = None;
+        }
+        ui.allocate_space(ui.available_size());
     }
 }
 
-impl Default for WinStatus {
-    fn default() -> Self {
-        Self::new()
+fn get_opt(v: &Option<f64>) -> String {
+    match v {
+        Some(value) => format!("{}", value),
+        None => "--".to_owned(),
     }
 }
 
 impl PubSubWindow for WinStatus {
-    fn show(&mut self, ctx: &egui::Context) {
-        let window_id = Id::new("status");
-        let popup_id = Id::new("popup");
+    fn show(&mut self, ctx: &egui::Context) -> Option<MyAppCmd> {
         let mut frame = egui::Frame::default()
             .rounding(Rounding::ZERO)
             .fill(egui::Color32::WHITE);
         let mut win = egui::Window::new(self.title.clone())
-            .id(window_id)
+            .id(self.window_id)
             .default_pos(self.rect.min)
             .frame(frame)
-            .title_bar(false)
+            .title_bar(true)
             .resizable(true)
-            .collapsible(true)
+            .collapsible(false)
             .constrain(false)
-            .max_width(600.0)
-            .max_height(600.0);
+            .max_width(300.0)
+            .max_height(100.0);
         win.show(ctx, |ui| {
-            let line = format!(" Time {:?}", chrono::Local::now());
-            ui.label(line.as_str());
-            ui.allocate_space(ui.available_size());
-            ui.interact(self.rect, popup_id, Sense::click())
-                .context_menu(|ui| {
-                    ui.label("Context menu");
-                    ui.horizontal(|ui| {
-                        ui.label("Title: ");
-                        ui.text_edit_singleline(&mut self.title);
+            ui.vertical_centered(|ui| {
+                let line = format!("CURRENT : {} {}", get_opt(&self.current_value), self.suffix);
+                ui.label(line.as_str());
+                let line = format!("MIN : {} {}", get_opt(&self.min_value), self.suffix);
+                ui.label(line.as_str());
+                let line = format!("MAX: {} {}", get_opt(&self.max_value), self.suffix);
+                ui.label(line.as_str());
+                ui.allocate_space(ui.available_size());
+                ui.interact(self.rect, self.context_menu_id, Sense::click())
+                    .context_menu(|ui| {
+                        self.context_menu(ui);
                     });
-                    ui.separator();
-                    if ui.button("Reset").clicked() {
-                        info!("Reset");
-                    }
-                });
+            });
         });
-        self.rect = ctx.memory(|mem| {
-            mem.area_rect(window_id)
-                .map(|rect| rect)
-                .unwrap()
-        });
+        self.rect = ctx.memory(|mem| mem.area_rect(self.window_id).map(|rect| rect).unwrap());
+        None
     }
 
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
-        if topic == "status" {
-            self.status = payload_decode::<u32>(payload).unwrap_or(0);
-            self.message = format!("Status: {}", self.status);
+        if topic == self.src_topic {
+            let new_value = decode_f64(payload);
+            self.current_value = Some(new_value);
+            if self.min_value.is_none() {
+                self.min_value = Some(new_value);
+            };
+            if self.max_value.is_none() {
+                self.max_value = Some(new_value);
+            }
+
+            if new_value < self.min_value.unwrap() {
+                self.min_value = Some(new_value);
+            }
+            if new_value > self.max_value.unwrap() {
+                self.max_value = Some(new_value);
+            }
         }
     }
 }
