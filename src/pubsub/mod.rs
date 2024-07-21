@@ -1,11 +1,12 @@
 use std::convert::Infallible;
 
 use data::Int;
-use decode::Error;
+use decode::{Error};
 use log::info;
 //pub mod mqtt_bridge;
 //pub mod redis_bridge;
 use minicbor::*;
+use minicbor::data::*;
 use zenoh::buffers::ZSliceBuffer;
 
 #[derive(Clone)]
@@ -52,22 +53,21 @@ pub fn payload_display(v: &Vec<u8>) -> String {
     }
 }
 
-pub fn decode_f64 (payload: &Vec<u8>) -> f64 {
-    match payload_decode::<Int>(payload) {
-        Ok(value) => {
-            let v:i64 = value.try_into().unwrap();
-            v as f64
-        },
-        Err(_) => {
-            match payload_decode::<f32>(payload) {
-                Ok(value) => value as f64,
-                Err(_) => {
-                    match payload_decode::<f64>(payload) {
-                        Ok(value) => value,
-                        Err(_) => 0.0,
-                    }
-                },
-            }
-        }
+pub fn decode_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
+    let mut decoder = Decoder::new(payload);
+    let v =  decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
+    match v[0] {
+        Token::F16(f) => Ok(f as f64),
+        Token::F32(f) => Ok(f as f64),
+        Token::F64(f) => Ok(f),
+        Token::I16(i) => Ok(i as f64),
+        Token::I32(i) => Ok(i as f64),
+        Token::I64(i) => Ok(i as f64),
+        Token::U16(i) => Ok(i as f64),
+        Token::U32(i) => Ok(i as f64),
+        Token::U64(i) => Ok(i as f64),
+        Token::I8(i) => Ok(i as f64),
+        Token::U8(i) => Ok(i as f64),
+        _ => Err(Error::type_mismatch(decoder.datatype().unwrap())),
     }
 }

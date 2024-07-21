@@ -30,6 +30,12 @@ use win_menu::*;
 mod win_topics;
 use win_topics::*;
 
+mod win_gauge;
+use win_gauge::*;
+
+mod win_progress;
+use win_progress::*;
+
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
 async fn main() -> eframe::Result<()> {
@@ -101,7 +107,7 @@ async fn main() -> eframe::Result<()> {
     )
 }
 
-trait PubSubWindow {
+pub trait PubSubWindow {
     fn show(&mut self, ctx: &egui::Context) -> Option<MyAppCmd>;
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>);
 }

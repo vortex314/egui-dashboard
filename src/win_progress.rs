@@ -7,33 +7,42 @@ use log::info;
 use minicbor::data::Int;
 use rand::Rng;
 
-pub struct WinStatus {
+pub struct WinProgress {
     rect: Rect,
     pub title: String,
     pub src_topic: String,
     pub suffix: String,
     pub current_value: Option<f64>,
+    pub prefix: String,
     pub min_value: Option<f64>,
     pub max_value: Option<f64>,
     window_id: Id,
     context_menu_id: Id,
 }
 
-impl WinStatus {
+impl WinProgress {
     pub fn new() -> Self {
         let mut rng = rand::thread_rng();
 
         Self {
             rect: Rect::from_min_size([200.0, 200.0].into(), [300.0, 300.0].into()),
-            title: "Latency".to_owned(),
+            title: "Progress".to_owned(),
             src_topic: "src/esp32/sys/latency".to_owned(),
             suffix: "msec".to_owned(),
             current_value: None,
+            prefix: "".to_owned(),
             min_value: None,
             max_value: None,
             window_id: Id::new(format!("status_{}", rng.gen::<u32>())),
             context_menu_id: Id::new(format!("context_menu_{}", rng.gen::<u32>())),
         }
+    }
+    pub fn fraction(&self, value: f64) -> f32 {
+        let min = self.min_value.unwrap_or(0.0);
+        let max = self.max_value.unwrap_or(1.0);
+        let mut value = if value < min { min } else { value };
+        value = if value > max { max } else { value };
+        ((value - min) / (max- min)) as f32
     }
     fn context_menu(&mut self, ui: &mut Ui) {
         let topics = vec![
@@ -94,7 +103,7 @@ fn round_rect_to_multiple(rect: Rect, multiple: f32) -> Rect {
     Rect::from_min_max([min_x, min_y].into(), [max_x, max_y].into())
 }
 
-impl PubSubWindow for WinStatus {
+impl PubSubWindow for WinProgress {
     fn show(&mut self, ctx: &egui::Context) -> Option<MyAppCmd> {
         let mut frame = egui::Frame::default()
             .rounding(Rounding::ZERO)
@@ -104,25 +113,21 @@ impl PubSubWindow for WinStatus {
             .default_pos(self.rect.min)
             .current_pos(self.rect.min)
             .frame(frame)
-            .title_bar(false)
+            .title_bar(true)
             .resizable(true)
-            .collapsible(false)
+            .collapsible(true)
             .constrain(false);
         win.show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.label(self.title.clone());
-                let line = format!("CURRENT : {} {}", get_opt(&self.current_value), self.suffix);
-                ui.label(line.as_str());
-                let line = format!("MIN : {} {}", get_opt(&self.min_value), self.suffix);
-                ui.label(line.as_str());
-                let line = format!("MAX: {} {}", get_opt(&self.max_value), self.suffix);
-                ui.label(line.as_str());
-                ui.allocate_space(ui.available_size());
-                ui.interact(self.rect, self.context_menu_id, Sense::click())
-                    .context_menu(|ui| {
-                        self.context_menu(ui);
-                    });
-            });
+            let s = format!("{} {}", self.current_value.unwrap_or(0.0), self.suffix);
+            ui.put(
+                self.rect,
+                egui::ProgressBar::new(self.fraction(self.current_value.unwrap_or(0.0)))
+                    .fill(Color32::RED)
+                    .rounding(Rounding::ZERO)
+                    .desired_height(self.rect.height())
+                    .desired_width(self.rect.width())
+                    .text(s),
+            );
         });
         self.rect = ctx.memory(|mem| mem.area_rect(self.window_id).map(|rect| rect).unwrap());
         self.rect = round_rect_to_multiple(self.rect, 30.0);

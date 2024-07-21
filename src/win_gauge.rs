@@ -7,7 +7,7 @@ use log::info;
 use minicbor::data::Int;
 use rand::Rng;
 
-pub struct WinStatus {
+pub struct WinGauge {
     rect: Rect,
     pub title: String,
     pub src_topic: String,
@@ -19,7 +19,7 @@ pub struct WinStatus {
     context_menu_id: Id,
 }
 
-impl WinStatus {
+impl WinGauge {
     pub fn new() -> Self {
         let mut rng = rand::thread_rng();
 
@@ -94,7 +94,7 @@ fn round_rect_to_multiple(rect: Rect, multiple: f32) -> Rect {
     Rect::from_min_max([min_x, min_y].into(), [max_x, max_y].into())
 }
 
-impl PubSubWindow for WinStatus {
+impl PubSubWindow for WinGauge {
     fn show(&mut self, ctx: &egui::Context) -> Option<MyAppCmd> {
         let mut frame = egui::Frame::default()
             .rounding(Rounding::ZERO)

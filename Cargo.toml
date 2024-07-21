@@ -37,6 +37,6 @@ serde_yaml = "0.9.21" # for a yaml description
 serde-xml-rs = { version="0.6.0" }
 minidom="*"
 zenoh = { version="*" }
-minicbor = { version = "*", features=["derive","alloc","half"] }
+minicbor = { version = "0.24.2", features=["derive","alloc","half"] }
 notify = "6.1.1"
 rand="*"
