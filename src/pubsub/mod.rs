@@ -1,7 +1,11 @@
+pub mod mqtt_pubsub;
+
+pub mod zenoh_pubsub;
+
 use std::convert::Infallible;
 
 use data::Int;
-use decode::{Error};
+use decode::Error;
 use log::info;
 //pub mod mqtt_bridge;
 //pub mod redis_bridge;
@@ -9,9 +13,9 @@ use minicbor::*;
 use minicbor::data::*;
 use zenoh::buffers::ZSliceBuffer;
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum PubSubCmd {
-    Publish { topic: String, message: Vec<u8> },
+    Publish { topic: String, payload: Vec<u8> },
     Disconnect,
     Connect,
     Subscribe { topic: String },
@@ -22,7 +26,7 @@ pub enum PubSubCmd {
 pub enum PubSubEvent {
     Connected,
     Disconnected,
-    Publish { topic: String, message: Vec<u8> },
+    Publish { topic: String, payload: Vec<u8> },
 }
 
 pub fn payload_encode<X>( v: X) -> Vec<u8>
@@ -53,7 +57,7 @@ pub fn payload_display(v: &Vec<u8>) -> String {
     }
 }
 
-pub fn decode_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
+pub fn payload_as_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
     let mut decoder = Decoder::new(payload);
     let v =  decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
     match v[0] {
@@ -68,6 +72,7 @@ pub fn decode_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
         Token::U64(i) => Ok(i as f64),
         Token::I8(i) => Ok(i as f64),
         Token::U8(i) => Ok(i as f64),
+        Token::Bool(b) => Ok(if b { 1.0 } else { 0.0 }),
         _ => Err(Error::type_mismatch(decoder.datatype().unwrap())),
     }
 }

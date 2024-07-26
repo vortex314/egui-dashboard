@@ -7,16 +7,20 @@ use eframe::egui;
 mod logger;
 mod pubsub;
 mod store;
-mod widget;
 
 use eframe::egui::Ui;
 use egui::epaint::RectShape;
 use egui::Color32;
 use egui::Layout;
+use egui::Pos2;
 use egui::Rect;
 use egui::RichText;
+use file_xml::load_dashboard;
+use file_xml::load_xml_file;
+use file_xml::WidgetParams;
 use log::{error, info, warn};
 use minidom::Element;
+use mqtt_pubsub::MqttPubSubActor;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::env;
@@ -26,7 +30,6 @@ use std::sync::*;
 use std::thread;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
-use widget::WidgetResult;
 
 use tokio::runtime::Builder;
 use tokio::sync::broadcast;
@@ -40,30 +43,22 @@ use logger::*;
 //use pubsub::mqtt_bridge::mqtt;
 //use pubsub::redis_bridge::redis;
 use pubsub::*;
+mod widgets;
+use widgets::*;
 
-use widget::button::Button;
-use widget::gauge::Gauge;
-use widget::label::Label;
-use widget::plot::Plot;
-use widget::progress::Progress;
-use widget::slider::Slider;
-use widget::status::Status;
-use widget::table::Table;
-use widget::tag::load_xml_file;
-use widget::tag::Tag;
-use widget::Widget;
+use widgets::Label;
 
 use clap::Parser;
-mod zenoh_pubsub;
 use zenoh_pubsub::*;
 mod limero;
 use limero::ActorTrait;
 use limero::SinkRef;
 use limero::SinkTrait;
+use limero::SourceTrait;
 use limero::*;
-mod file_change;
-use file_change::*;
-
+mod config;
+use config::*;
+/*
 struct MessageHandler {
     dashboard: Arc<Mutex<Dashboard>>,
     cmds: Sink<PubSubEvent>,
@@ -84,11 +79,11 @@ impl ActorTrait<PubSubEvent, ()> for MessageHandler {
             let x = self.cmds.next().await;
             match x {
                 Some(cmd) => match cmd {
-                    PubSubEvent::Publish { topic, message } => {
+                    PubSubEvent::Publish { topic, payload } => {
                         self.dashboard
                             .lock()
                             .unwrap()
-                            .on_message(PubSubEvent::Publish { topic, message });
+                            .update(WidgetMsg::Pub { topic, payload });
                     }
                     _ => {}
                 },
@@ -102,7 +97,33 @@ impl ActorTrait<PubSubEvent, ()> for MessageHandler {
         self.cmds.sink_ref()
     }
 }
+*/
+fn start_pubsub_mqtt(
+    cfg: &Element,
+    event_sink: SinkRef<PubSubEvent>,
+) -> Result<SinkRef<PubSubCmd>, String> {
+    let mut mqtt_actor = MqttPubSubActor::new();
+    let pubsub_cmd = mqtt_actor.sink_ref();
+    mqtt_actor.add_listener(event_sink);
+    tokio::spawn(async move {
+        mqtt_actor.run().await;
+        error!("Mqtt actor exited");
+    });
+    /*   pubsub_cmd.push(PubSubCmd::Connect);
+    pubsub_cmd.push(PubSubCmd::Subscribe {
+        topic: "**".to_string(),
+    });*/
+    Ok(pubsub_cmd)
+}
 
+#[derive(Debug)]
+enum MyError<'a> {
+    Io(std::io::Error),
+    Xml(minidom::Error),
+    Yaml(serde_yaml::Error),
+    Str(&'a str),
+    String(String),
+}
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[clap(author, version, about)]
@@ -116,89 +137,80 @@ struct Args {
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
-async fn main() -> () {
+async fn main() -> Result<(), MyError<'static>> {
     let args = Args::parse();
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
     info!("Starting up. Reading config file {}.", &args.config);
 
-    let mut pubsub = PubSubActor::new();
-    pubsub.sink_ref().push(PubSubCmd::Subscribe {
-        topic: "**".to_string(),
-    });
+    let mut event_sink = limero::Sink::new(100);
 
-    let mut dashboard_config = Box::new(load_xml_file(&args.config).unwrap());
-    let dashboard_title = dashboard_config
-        .label
-        .clone()
-        .unwrap_or(String::from("Dashboard"));
-    let dashboard = Arc::new(Mutex::new(Dashboard::new(pubsub.sink_ref())));
-    let _r = dashboard
-        .lock()
-        .unwrap()
-        .load(&mut dashboard_config)
-        .unwrap();
-    let mut db_clone = dashboard.clone();
-    let mut db_clone2 = dashboard.clone();
+    let root_config = load_xml_file("./config.xml").map_err(MyError::Xml)?;
 
-    let mut dashboard_message_handler = MessageHandler::new(dashboard.clone());
-    pubsub.add_listener(dashboard_message_handler.sink_ref());
+    let pubsub_config = root_config
+        .get_child("PubSub", "")
+        .ok_or(MyError::Str("PubSub section not found"))?;
+    let pubsub_cmd =
+        start_pubsub_mqtt(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;
 
-    let mut file_change = FileChange::new(args.config.clone());
-    let pubsub_sink_ref = pubsub.sink_ref();
-    file_change.for_all(Box::new(move |fc: FileChangeEvent| {
-        match fc {
-            FileChangeEvent::FileChange(file_name) => {
-                info!("File changed {}", file_name);
-                let mut error_config = Tag::new("label".to_string());
-                error_config.label = Some("Error loading config file".to_string());
-                let mut dashboard_config = Box::new(load_xml_file(&file_name).or(Some(error_config)).unwrap());
-                let dashboard_title = dashboard_config
-                    .label
-                    .clone()
-                    .unwrap_or(String::from("Dashboard"));
-                db_clone2
-                    .lock()
-                    .unwrap()
-                    .load(&mut dashboard_config)
-                    .unwrap();
+    let dashboard_config = root_config
+        .get_child("Dashboard", "")
+        .ok_or(MyError::Str("Dashboard section not found"))?;
+    let widgets_params = load_dashboard(&dashboard_config).map_err(MyError::String)?;
+    let mut widgets = Vec::new();
+    for widget_params in widgets_params {
+        let widget = create_widget(&widget_params, pubsub_cmd.clone()).map_err(MyError::String)?;
+        widgets.push(widget);
+    }
+
+    let dashboard = Dashboard {
+        widgets:Arc::new(Mutex::new(widgets)),
+        pubsub_cmd,
+    };
+
+
+    let db = dashboard.clone();
+    tokio::spawn(async move {
+        loop {
+            let m = event_sink.next().await;
+            match m {
+                Some(PubSubEvent::Publish { topic, payload }) => {
+                    info!("Publishing topic {} payload {:?}", topic, payload);
+                    db.update(WidgetMsg::Pub { topic, payload });
+                }
+                _ => {}
             }
         }
-    }));
-
-    tokio::spawn(async move {
-        file_change.run().await;
-    });
-
-    tokio::spawn(async move {
-        pubsub.run().await;
-    });
-    tokio::spawn(async move {
-        dashboard_message_handler.run().await;
     });
 
     let native_options: eframe::NativeOptions = eframe::NativeOptions::default();
     let _r = eframe::run_native(
-        dashboard_title.as_str(),
+        "Dashboard",
         native_options,
-        Box::new(|x| Box::new(DashboardApp::new(dashboard, x.egui_ctx.clone()))),
+        Box::new(|x| Ok(Box::new(DashboardApp::new(dashboard)))),
     );
     info!("Exiting.");
+    Ok(())
 }
 
+#[derive(Clone) ]
 pub struct Dashboard {
-    widgets: Vec<Box<dyn Widget + Send>>,
-    context: Option<egui::Context>,
-    pubsub_cmd : SinkRef<PubSubCmd>,
+    widgets: Arc<Mutex<Vec<Box<dyn PubSubWidget + Send>>>>,
+    pubsub_cmd: SinkRef<PubSubCmd>,
 }
+#[derive(Clone)]
+
 pub struct DashboardApp {
-    dashboard: Arc<Mutex<Dashboard>>,
+    dashboard: Dashboard,
 }
 
 impl DashboardApp {
-    fn new(dashboard: Arc<Mutex<Dashboard>>, context: egui::Context) -> Self {
-        dashboard.lock().unwrap().context = Some(context);
+    fn new(dashboard: Dashboard) -> Self {
         Self { dashboard }
+    }
+
+    fn update(&mut self, widget_msg: WidgetMsg) {
+        self.dashboard.update(widget_msg);
     }
 }
 
@@ -217,39 +229,33 @@ impl eframe::App for DashboardApp {
 }
 
 impl Dashboard {
-    fn new(pubsub_cmd : SinkRef<PubSubCmd>) -> Self {
+    fn new(pubsub_cmd: SinkRef<PubSubCmd>) -> Self {
         Self {
             widgets: Vec::new(),
-            context: None,
             pubsub_cmd,
         }
     }
 
     fn draw(&mut self, ui: &mut egui::Ui) {
         self.widgets.iter_mut().for_each(|widget| {
-            let _r = widget.draw(ui);
+            widget.draw(ui);
         });
     }
 
-    fn on_message(&mut self, message: PubSubEvent) -> bool {
+    fn update(&mut self, widget_msg: WidgetMsg) -> bool {
         let mut repaint = false;
-        match message {
-            PubSubEvent::Publish { topic, message } => {
-                for widget in self.widgets.iter_mut() {
-                    if widget.on_message(topic.as_str(), &message) == WidgetResult::Update {
-                        repaint = true
-                    };
-                }
-            }
-            _ => {}
-        }
+        self.widgets.lock().iter_mut().for_each(|widget| {
+            if widget.update(&widget_msg) == WidgetResult::Update {
+                repaint = true
+            };
+        });
         if repaint {
             self.context.as_ref().unwrap().request_repaint();
         }
         repaint
     }
 
-    fn load(&mut self, cfg: &Tag, ) -> Result<(), String> {
+    /*fn load(&mut self, cfg: &Tag) -> Result<(), String> {
         if cfg.name != "Dashboard" {
             return Err("Invalid config file. Missing Dashboard tag.".to_string());
         }
@@ -271,84 +277,26 @@ impl Dashboard {
             }
         });
         Ok(())
-    }
+    }*/
 }
 
-fn load_widgets(
-    rect: egui::Rect,
-    cfg: &Tag,
+fn create_widget(
+    cfg: &WidgetParams,
     cmd_sender: SinkRef<PubSubCmd>,
-) -> Vec<Box<dyn Widget + Send>> {
-    let mut widgets: Vec<Box<dyn Widget + Send>> = Vec::new();
-    let mut rect = rect;
-
-    if cfg.height.is_some() {
-        rect.max.y = rect.min.y + cfg.height.unwrap() as f32;
+) -> Result<Box<dyn PubSubWidget + Send>, String> {
+    let name = cfg.name.as_str();
+    let rect = Rect {
+        min: Pos2 {
+            x: cfg.rect.x as f32,
+            y: cfg.rect.y as f32,
+        },
+        max: Pos2 {
+            x: cfg.rect.x as f32 + cfg.rect.w as f32,
+            y: cfg.rect.y as f32 + cfg.rect.h as f32,
+        },
+    };
+    match name {
+        "Label" => Ok(Box::new(Label::new(rect, cfg))),
+        _ => Ok(Box::new(Label::new(rect, cfg))), //Err(format!("Unknown widget: {}", cfg.name)),
     }
-    if cfg.width.is_some() {
-        rect.max.x = rect.min.x + cfg.width.unwrap() as f32;
-    }
-    info!(
-        "{} : {} {:?}",
-        cfg.name,
-        cfg.label.as_ref().get_or_insert(&String::from("NO_LABEL")),
-        rect
-    );
-
-    match cfg.name.as_str() {
-        "Row" => {
-            cfg.children.iter().for_each(|child| {
-                let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
-                widgets.append(&mut sub_widgets);
-                if child.width.is_some() {
-                    rect.min.x += child.width.unwrap() as f32;
-                }
-            });
-        }
-        "Col" => {
-            cfg.children.iter().for_each(|child| {
-                let mut sub_widgets = load_widgets(rect, child, cmd_sender.clone());
-                widgets.append(&mut sub_widgets);
-                if child.height.is_some() {
-                    rect.min.y += child.height.unwrap() as f32;
-                }
-            });
-        }
-        "Status" => {
-            let mut status = Status::new(rect, cfg);
-            widgets.push(Box::new(status));
-        }
-        "Gauge" => {
-            let widget = Gauge::new(rect, cfg);
-            widgets.push(Box::new(widget));
-        }
-        "Label" => {
-            let widget = Label::new(rect, cfg);
-            widgets.push(Box::new(widget));
-        }
-        "Progress" => {
-            let widget = Progress::new(rect, cfg);
-            widgets.push(Box::new(widget));
-        }
-        "Button" => {
-            let widget = Button::new(rect, cfg, cmd_sender);
-            widgets.push(Box::new(widget));
-        }
-        "Slider" => {
-            let widget = Slider::new(rect, cfg, cmd_sender);
-            widgets.push(Box::new(widget));
-        }
-        "Table" => {
-            let widget = Table::new(rect, cfg);
-            widgets.push(Box::new(widget));
-        }
-        "Plot" => {
-            let widget = Plot::new(rect, cfg);
-            widgets.push(Box::new(widget));
-        }
-        _ => {
-            warn!("Unknown widget: {}", cfg.name);
-        }
-    }
-    widgets
 }

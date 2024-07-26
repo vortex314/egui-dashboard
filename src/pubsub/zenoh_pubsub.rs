@@ -10,29 +10,27 @@ use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio::select;
 
+use crate::limero::ActorTrait;
 use crate::limero::Sink;
 use crate::limero::SinkRef;
 use crate::limero::SinkTrait;
 use crate::limero::Source;
-use crate::ActorTrait;
-use crate::SourceTrait;
+use crate::limero::SourceTrait;
 
-
+use crate::pubsub::payload_display;
+use crate::pubsub::{PubSubCmd, PubSubEvent};
 use minicbor::display;
 use zenoh::open;
 use zenoh::prelude::r#async::*;
 use zenoh::subscriber::Subscriber;
-use crate::pubsub::{PubSubCmd, PubSubEvent};
-use crate::pubsub::payload_display;
 
-
-pub struct PubSubActor {
+pub struct ZenohPubSubActor {
     cmds: Sink<PubSubCmd>,
     events: Source<PubSubEvent>,
     config: zenoh::config::Config,
 }
 
-impl PubSubActor {
+impl ZenohPubSubActor {
     pub fn new() -> Self {
         let mut config = Config::from_file("./zenohd.json5");
         if config.is_err() {
@@ -44,7 +42,7 @@ impl PubSubActor {
         } else {
             info!("Using zenohd.json5 file");
         }
-        PubSubActor {
+        ZenohPubSubActor {
             cmds: Sink::new(100),
             events: Source::new(),
             config: config.unwrap(),
@@ -52,10 +50,11 @@ impl PubSubActor {
     }
 }
 
-impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
+impl ActorTrait<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
     async fn run(&mut self) {
         let static_session: &'static mut Session =
             Session::leak(zenoh::open(config::default()).res().await.unwrap());
+        let subscriber = static_session.declare_subscriber("**").res().await.unwrap();
         loop {
             select! {
                 cmd = self.cmds.next() => {
@@ -68,14 +67,11 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                             info!("Disconnecting from zenoh");
                             self.events.emit(PubSubEvent::Disconnected);
                         }
-                        Some(PubSubCmd::Publish { topic, message}) => {
-                            let s = format!("{}", minicbor::display(message.as_slice()));
-                            let s :&str = s.as_str();
-                            let v:Value = s.into();
-                            info!("Publishing to zenoh: {}", v);
+                        Some(PubSubCmd::Publish { topic, payload}) => {
+                            info!("To zenoh: {}:{}", topic,payload_display(&payload));
                             let _res = static_session
-                                .put(&topic,v)
-                                .encoding(KnownEncoding::TextPlain)
+                                .put(&topic,payload.as_slice())
+                                .encoding(KnownEncoding::AppOctetStream)
                                 .res().await;
                         }
                         Some(PubSubCmd::Subscribe { topic }) => {
@@ -83,18 +79,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                             let subscriber = static_session.declare_subscriber(&topic).res().await;
                             match subscriber {
                                 Ok(sub) => {
-                                    let emitter =  self.events.clone();
-                                    tokio::spawn(async move {
-                                        while let Ok(sample) = sub.recv_async().await {
-                                            let data = sample.payload.contiguous().to_vec();
-                                            let s = format!("{}", minicbor::display(&data));
-                                            info!("Received: {}:[{}]:{}",sample.key_expr.to_string(), data.len(),payload_display(&data));
-                                            emitter.emit(PubSubEvent::Publish {
-                                                topic: sample.key_expr.to_string(),
-                                                message:sample.payload.contiguous().to_vec(),
-                                            });
-                                        };
-                                    });
+
                                 }
                                 Err(e) => {
                                     error!("Error subscribing to zenoh: {}", e);
@@ -109,6 +94,20 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
                             info!("PubSubActor::run() None");
                         }
                     }
+                },
+                msg = subscriber.recv_async() => {
+                    match msg {
+                        Ok(msg) => {
+                            let topic = msg.key_expr.to_string();
+                            let payload = msg.payload.contiguous().to_vec();
+                            info!("From zenoh: {}:{}", topic,payload_display(&payload));
+                            let event = PubSubEvent::Publish { topic, payload };
+                            self.events.emit(event);
+                        }
+                        Err(e) => {
+                            info!("PubSubActor::run() error {} ",e);
+                        }
+                    }
                 }
             }
         }
@@ -119,7 +118,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for PubSubActor {
     }
 }
 
-impl SourceTrait<PubSubEvent> for PubSubActor {
+impl SourceTrait<PubSubEvent> for ZenohPubSubActor {
     fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
         self.events.add_listener(sink);
     }

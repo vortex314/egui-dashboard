@@ -1,8 +1,8 @@
 use crate::payload_decode;
-use crate::widget::rect_border;
-use crate::widget::tag::Tag;
-use crate::widget::Widget;
-use crate::widget::WidgetResult;
+use crate::widgets::rect_border;
+use crate::widgets::tag::Tag;
+use crate::widgets::Widget;
+use crate::widgets::WidgetResult;
 use egui::containers::Frame;
 use egui::*;
 use log::info;

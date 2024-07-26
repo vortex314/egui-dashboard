@@ -1,13 +1,13 @@
 
 use egui::containers::Frame;
 use egui::*;
-use crate::widget::Widget;
-use crate::widget::WidgetResult;
-use crate::widget::tag::Tag;
+use crate::widgets::Widget;
+use crate::widgets::WidgetResult;
+use crate::widgets::tag::Tag;
 use std::time::Duration;
 use std::time::Instant;
 
-use crate::widget::rect_border;
+use crate::widgets::rect_border;
 
 #[derive(PartialEq)]
 enum StatusValue {

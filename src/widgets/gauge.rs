@@ -1,9 +1,10 @@
 use crate::payload_decode;
-use crate::widget::tag::Tag;
-use crate::widget::Widget;
-use crate::widget::WidgetResult;
+use crate::widgets::tag::Tag;
+use crate::widgets::Widget;
+use crate::widgets::WidgetResult;
 use egui::containers::Frame;
 use egui::*;
+use epaint::PathStroke;
 use log::info;
 use std::time::Duration;
 use std::time::Instant;
@@ -332,7 +333,7 @@ impl EguiGauge {
                 .collect(),
             closed: true,
             fill: bg_color,
-            stroke: Stroke {
+            stroke: PathStroke {
                 width: 0.0,
                 color: bg_color,
             },
@@ -350,7 +351,7 @@ impl EguiGauge {
                 .collect(),
             closed: true,
             fill: self.color,
-            stroke: Stroke {
+            stroke: PathStroke {
                 width: 0.0,
                 color: bg_color,
             },
@@ -374,7 +375,7 @@ impl EguiGauge {
                 .collect(),
             closed: true,
             fill: arc_bg_color,
-            stroke: Stroke {
+            stroke: PathStroke {
                 width: 0.0,
                 color: bg_color,
             },
@@ -403,7 +404,7 @@ impl EguiGauge {
             ],
             closed: true,
             fill: bg_color,
-            stroke: Stroke {
+            stroke: PathStroke {
                 width: 2.0,
                 color: bg_color,
             },

@@ -1,15 +1,14 @@
 use egui::Ui;
-pub mod status;
-pub mod gauge;
-pub mod tag;
+/*pub mod status;
+pub mod gauge;*/
 pub mod label;
-pub mod progress;
+pub use label::Label as Label;
+/*pub mod progress;
 pub mod button;
 pub mod slider;
 pub mod table;
-pub mod plot;
+pub mod plot;*/
 
-use tag::Tag;
 
 use crate::PubSubCmd;
 
@@ -19,9 +18,14 @@ pub enum WidgetResult {
     NoEffect,
 }
 
-pub trait Widget {
-    fn draw(&mut self, ui: &mut egui::Ui) -> Result<(), String>;
-    fn on_message(&mut self, topic:&str,payload:&Vec<u8>) -> WidgetResult;
+pub enum WidgetMsg {
+    Pub { topic : String, payload : Vec<u8>},
+    Tick ,
+}
+
+pub trait PubSubWidget : Send {
+    fn update(&mut self, event:& WidgetMsg) -> WidgetResult;
+    fn draw(&mut self,ui:&mut Ui);
 }
 
 pub fn rect_border(rect: egui::Rect) -> egui::Rect {

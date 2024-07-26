@@ -1,9 +1,9 @@
 use crate::payload_display;
 use crate::store::sub_table::OrderSort;
 use crate::store::*;
-use crate::widget::tag::Tag;
-use crate::widget::Widget;
-use crate::widget::WidgetResult;
+use crate::widgets::tag::Tag;
+use crate::widgets::Widget;
+use crate::widgets::WidgetResult;
 use egui::containers::Frame;
 use egui::*;
 use egui_extras::{Column, TableBuilder};

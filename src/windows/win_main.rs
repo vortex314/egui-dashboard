@@ -5,8 +5,7 @@
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 use clap::ColorChoice;
-use eframe::egui;
-use egui::Color32;
+use egui::*;
 use log::{self, info};
 mod logger;
 use logger::*;
@@ -42,14 +41,7 @@ async fn main() -> eframe::Result<()> {
     env::set_var("RUST_LOG", "info");
     let _ = logger::init();
 
-    let my_frame = egui::containers::Frame {
-        inner_margin: egui::style::Margin { left: 10., right: 10., top: 10., bottom: 10. },
-        outer_margin: egui::style::Margin { left: 10., right: 10., top: 10., bottom: 10. },
-        rounding: egui::Rounding { nw: 1.0, ne: 1.0, sw: 1.0, se: 1.0 },
-        shadow: eframe::epaint::Shadow { extrusion: 1.0, color: Color32::YELLOW },
-        fill: Color32::LIGHT_BLUE,
-        stroke: egui::Stroke::new(2.0, Color32::GOLD),
-    };
+    let my_frame = egui::containers::Frame::default();
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
@@ -87,7 +79,10 @@ async fn main() -> eframe::Result<()> {
         pubsub.run().await;
     });
 
-    eframe::run_native(
+        let native_options = eframe::NativeOptions::default();
+        eframe::run_native("MyApp", options, Box::new(|cc| Ok(Box::new(MyApp::new(cc)))))
+
+    /*eframe::run_native(
         "PubSub Dashboard",
         options,
         Box::new(|cc| {
@@ -98,13 +93,13 @@ async fn main() -> eframe::Result<()> {
 
             cc.egui_ctx.set_visuals(visuals);
             // This gives us image support:
-            egui_extras::install_image_loaders(&cc.egui_ctx);
+       //     egui_extras::install_image_loaders(&cc.egui_ctx);
 
 
 
             app
         }),
-    )
+    )*/
 }
 
 pub trait PubSubWindow {

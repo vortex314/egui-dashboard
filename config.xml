@@ -1,12 +1,29 @@
-<Dashboard label="Prototype Dashboard" h="768" w="1024" url="redis://limero.ddns.net:6379"
-    xmlns="./config.xsd" theme="light">
-    <Col>
-        <Row h="200">
-            <Label label="All" src="src/esp32/sys/latency" w="70" h="50" />
-            <Table w="600" h="200" src=".*" label="ESP32" timeout="10000" />
-            <Gauge src="src/esp32/sys/latency" label="msec" timeout="10000" w="150" min="0" max="10" />
-        </Row>
-        <Progress h="30" w="1024" label="Voltage" unit="msec" src="src/esp32/sys/latency" min="0.0" max="5.0" />
-        <Plot h="268" w="1024" label="Latency" unit="V" src="src/esp32/sys/latency" min="0.0" max="10.0" timespan="1000000" samples="1000"/>
-    </Col>
-</Dashboard>
+<Config xmlns="">
+    <PubSub>
+        <Mqtt host="pcthink.local" port="1883" pattern="#" encoding="json" />
+        <Redis host="limero.ddns.net" port="6379" pattern="*" />
+        <Zenoh host="limero.ddns.net" port="7447" pattern="**" encoding="cbor" />
+    </PubSub>
+    <Dashboard w="1024" h="768" label="Prototype Dashboard" theme="light">
+        <Col w="800">
+            <Row h="50">
+                <BrokerAlive w="50" label="MQTT"  />
+                <Button w="100" label="Test pub" dst="dst/esp32/sys/test" on="1" off="0" />
+                <Label w="100" h="50" label="Test sub" src="dst/esp32/sys/test" timeout="6000" />
+            </Row>
+            <Row h="200">
+                <Label w="70" h="50" label=" 70 x 50 " src="src/esp32/sys/latency" />
+                <Table w="600" h="200" label="Table" src=".*" timeout="10000" />
+                <Gauge w="150" label="Gauge" src="src/esp32/sys/latency" suffix=" msec" timeout="100000"
+                    min="0"
+                    max="10" />
+            </Row>
+            <Row h="270">
+                <Progress w="20" label="Progress" unit="msec" src="src/esp32/sys/latency"
+                    min="0.0" max="5.0" />
+                <Plot label="Plot" unit="V" src="src/esp32/sys/latency" min="0.0" max="10.0"
+                    timespan="1000000" samples="10000" />
+            </Row>
+        </Col>
+    </Dashboard>
+</Config>

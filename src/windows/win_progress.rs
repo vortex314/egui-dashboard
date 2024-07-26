@@ -111,7 +111,7 @@ impl PubSubWindow for WinProgress {
         let mut win = egui::Window::new(self.title.clone())
             .id(self.window_id)
             .default_pos(self.rect.min)
-            .current_pos(self.rect.min)
+//            .current_pos(self.rect.min)
             .frame(frame)
             .title_bar(true)
             .resizable(true)
@@ -129,8 +129,8 @@ impl PubSubWindow for WinProgress {
                     .text(s),
             );
         });
-        self.rect = ctx.memory(|mem| mem.area_rect(self.window_id).map(|rect| rect).unwrap());
-        self.rect = round_rect_to_multiple(self.rect, 30.0);
+ //       self.rect = ctx.memory(|mem| mem.area_rect(self.window_id).map(|rect| rect).unwrap());
+ //       self.rect = round_rect_to_multiple(self.rect, 30.0);
         None
     }
 
