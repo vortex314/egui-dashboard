@@ -1,10 +1,19 @@
+use crate::draw_border;
+use crate::file_xml::WidgetParams;
+use crate::inside_rect;
+use crate::payload_as_f64;
 use crate::payload_decode;
-use crate::widgets::tag::Tag;
-use crate::widgets::Widget;
+use crate::payload_display;
+use crate::store::timeseries;
+use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
+use crate::WidgetMsg;
 use egui::containers::Frame;
 use egui::*;
+use egui_plot::PlotPoints;
+use epaint::ColorMode;
 use epaint::PathStroke;
+use epaint::RectShape;
 use log::info;
 use std::time::Duration;
 use std::time::Instant;
@@ -20,39 +29,54 @@ pub struct Gauge {
     max: f64,
 }
 
-impl Widget for Gauge {
-    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
-        if self.src_topic != topic {
-            return WidgetResult::NoEffect;
+impl PubSubWidget for Gauge {
+    fn update(&mut self, event: &WidgetMsg) -> WidgetResult {
+        match event {
+            WidgetMsg::Pub { topic, payload } => {
+                if self.src_topic != *topic {
+                    WidgetResult::NoEffect
+                } else {
+                    self.value = payload_as_f64(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
+                    self.expire_time = Instant::now() + self.expire_duration;
+                        WidgetResult::Update
+                    
+                }
+            }
+            WidgetMsg::Tick => {
+                if Instant::now() > self.expire_time {
+                    return WidgetResult::Update;
+                }
+                WidgetResult::NoEffect
+            }
         }
-        self.expire_time = Instant::now() + self.expire_duration;
-        self.value = payload_decode::<f64>(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
-        WidgetResult::Update
+
     }
-    fn draw(&mut self, ui: &mut egui::Ui) -> Result<(), String> {
-//        info!("Gauge draw {:?}",self.major_ticks());
+
+
+
+    fn draw(&mut self, ui: &mut egui::Ui) {
         let mut range = self.min..=self.max;
         let square = self.rect.width().min(self.rect.height());
         let g = EguiGauge::new(self.value, range, square,Color32::RED)
             .text(self.label.clone());
         let rect = Rect::from_min_size(self.rect.min, egui::vec2(square, square));
         ui.put(rect, g);
-        Ok(())
     }
 }
 
 impl Gauge {
-    pub fn new(rect: Rect, config: &Tag) -> Self {
+    pub fn new(rect: Rect, config: &WidgetParams) -> Self {
         let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
+
         Self {
             rect,
             label: config.label.as_ref().unwrap_or(&config.name).clone(),
-            src_topic: config.src.as_ref().unwrap_or(&String::from("")).clone(),
-            value: 0.0,
+            src_topic: config.src_topic.as_ref().unwrap_or(&String::from("")).clone(),
             expire_time: Instant::now() + expire_duration,
             expire_duration,
-            min: config.min.unwrap_or(0.0),
-            max: config.max.unwrap_or(100.0),
+            min:config.min.unwrap_or(0.0),
+            max: config.max.unwrap_or(1.0),
+            value: 0.0,
         }
     }
 
@@ -60,34 +84,13 @@ impl Gauge {
         Instant::now() > self.expire_time
     }
 
-    fn major_ticks(&self) -> Vec<f64> {
-        let mut ticks = Vec::new();
-        let range = self.max - self.min;
-        let num_major_ticks = 5;
-        let num_minor_ticks_per_major = 4;
-        let major_increment = range / (num_major_ticks - 1) as f64;
-        let rounding_factor = 10.0_f64.powf(major_increment.log10().floor());
-
-        let rounded_min_value = (self.min / rounding_factor).floor() * rounding_factor;
-        let rounded_max_value = (self.max / rounding_factor).ceil() * rounding_factor;
-        let rounded_range = rounded_max_value - rounded_min_value;
-        let major_increment = rounded_range / (num_major_ticks - 1) as f64;
-
-        for i in 0..num_major_ticks {
-            let tick_value = rounded_min_value + i as f64 * major_increment as f64;
-            ticks.push(tick_value);
-            /*if i < num_major_ticks - 1 && num_minor_ticks_per_major > 0 {
-                let minor_increment = major_increment / (num_minor_ticks_per_major + 1) as f64;
-                for j in 1..=num_minor_ticks_per_major {
-                    let minor_tick_value = tick_value + j as f64 * minor_increment as f64;
-                    ticks.push(minor_tick_value);
-                }
-            }*/
-        }
-        ticks
-        
+    pub fn fraction(&self, value: f64) -> f32 {
+        let mut value = if value < self.min { self.min } else { value };
+        value = if value > self.max { self.max } else { value };
+        ((value - self.min) / (self.max - self.min)) as f32
     }
 }
+
 
 
 ///! This crate contains a gauge UI element for use with `egui`
@@ -335,7 +338,7 @@ impl EguiGauge {
             fill: bg_color,
             stroke: PathStroke {
                 width: 0.0,
-                color: bg_color,
+                color: ColorMode::Solid(bg_color),
             },
         }));
     }
@@ -353,8 +356,7 @@ impl EguiGauge {
             fill: self.color,
             stroke: PathStroke {
                 width: 0.0,
-                color: bg_color,
-            },
+                color: ColorMode::Solid(bg_color),            },
         }));
     }
 
@@ -377,8 +379,7 @@ impl EguiGauge {
             fill: arc_bg_color,
             stroke: PathStroke {
                 width: 0.0,
-                color: bg_color,
-            },
+                color: ColorMode::Solid(bg_color),            },
         }));
     }
 
@@ -406,8 +407,7 @@ impl EguiGauge {
             fill: bg_color,
             stroke: PathStroke {
                 width: 2.0,
-                color: bg_color,
-            },
+                color: ColorMode::Solid(bg_color),            },
         }));
     }
 
@@ -415,7 +415,7 @@ impl EguiGauge {
         let desired_size = egui::vec2(self.size, self.size);
         let (rect, response) = ui.allocate_exact_size(desired_size, Sense::hover());
 
-        response.widget_info(|| egui::WidgetInfo::slider(self.value, &self.text));
+        response.widget_info(|| egui::WidgetInfo::slider(true,self.value, &self.text));
 
         if ui.is_rect_visible(rect) {
             self.paint(ui, rect);

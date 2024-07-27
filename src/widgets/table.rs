@@ -1,18 +1,26 @@
+use crate::draw_border;
+use crate::file_xml::WidgetParams;
+use crate::inside_rect;
+use crate::payload_as_f64;
+use crate::payload_decode;
 use crate::payload_display;
+use crate::store::sub_table;
 use crate::store::sub_table::OrderSort;
-use crate::store::*;
-use crate::widgets::tag::Tag;
-use crate::widgets::Widget;
+use crate::store::timeseries;
+use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
+use crate::WidgetMsg;
 use egui::containers::Frame;
 use egui::*;
-use egui_extras::{Column, TableBuilder};
-use regex::Regex;
-use egui::TextStyle::Body;
+use egui_extras::Column;
+use egui_extras::TableBuilder;
 use egui::FontFamily::Proportional;
+use egui::TextStyle::Body;
 use egui::TextStyle::Heading;
-
+use egui_plot::PlotPoints;
+use epaint::RectShape;
 use log::info;
+use regex::Regex;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -28,19 +36,33 @@ pub struct Table {
     reverse:bool,
 }
 
-impl Widget for Table {
-    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) -> WidgetResult {
-        if self.regex.is_match(topic) {
-            self.table.add(topic.to_string(), payload_display(&payload));
-            WidgetResult::Update
-        } else {
-            WidgetResult::NoEffect
+impl PubSubWidget for Table {
+    fn update(&mut self, event: &WidgetMsg) -> WidgetResult {
+        match event {
+            WidgetMsg::Pub { topic, payload } => {
+                if self.regex.is_match(topic) {
+                    self.table.add(topic.to_string(), payload_display(&payload));
+                    WidgetResult::Update
+                } else {
+                    WidgetResult::NoEffect
+                }
+            }
+            WidgetMsg::Tick => {
+                if Instant::now() > self.expire_time {
+                    return WidgetResult::Update;
+                }
+                WidgetResult::NoEffect
+            }
         }
+
     }
-    fn draw(&mut self, ui: &mut Ui) -> Result<(), String> {
+
+
+
+    fn draw(&mut self, ui: &mut egui::Ui) {
         let layout = Layout::top_down(Align::LEFT);
   //      info!("Plot {} : {:?}", self.label, self.rect);
-        let mut child_ui = ui.child_ui(self.rect, layout);
+        let mut child_ui = ui.child_ui(self.rect, layout,None);
         let mut style = egui::Style::default();
         // small font
         style.text_styles.insert(Body, FontId::new(12.0, Proportional));
@@ -90,37 +112,34 @@ impl Widget for Table {
                     });
                     row.col(|ui| {
                         //ui.label(x.topic.as_str());
-                        ui.add(egui::Label::new(x.topic.as_str()).truncate(true));
+                        ui.add(egui::Label::new(x.topic.as_str()).truncate());
                     });
                     row.col(|ui| {
                         //  ui.label(x.value.as_str());
-                        ui.add(egui::Label::new(x.value.as_str()).truncate(true));
+                        ui.add(egui::Label::new(x.value.as_str()).truncate());
                     });
                 });
             });
         });
 
-        Ok(())
     }
 }
 
 impl Table {
-    pub fn new(rect: Rect, config: &Tag) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
-        let src_pattern = config
-            .src
-            .as_ref()
-            .unwrap_or(&String::from("IMPOSSIBLE"))
-            .clone();
+    pub fn new(rect: Rect, config: &WidgetParams) -> Self {
         Self {
             rect,
             label: config.label.as_ref().unwrap_or(&config.name).clone(),
             text_size: config.text_size.unwrap_or(20),
+            src_topic: config
+                .src_topic
+                .as_ref()
+                .unwrap_or(&String::from(""))
+                .clone(),
+            expire_time: Instant::now() + Duration::from_millis(config.timeout.unwrap_or(3000) as u64),
+            expire_duration: Duration::from_millis(config.timeout.unwrap_or(3000) as u64),
             table: sub_table::SubTable::new(),
-            src_topic: src_pattern.clone(),
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
-            regex: Regex::new(src_pattern.as_str()).unwrap(),
+            regex: Regex::new(r"").unwrap(),
             reverse:false,
         }
     }

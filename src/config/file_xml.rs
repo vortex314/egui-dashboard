@@ -29,6 +29,7 @@ pub struct WidgetParams {
     pub label: Option<String>,
     pub height: Option<i32>,
     pub width: Option<i32>,
+    pub margin: Option<i32>,
     pub text_size: Option<i32>,
     pub msec: Option<i32>,
     pub min: Option<f64>,
@@ -100,6 +101,9 @@ pub fn get_widget_params(rect:WidgetRect,element: &Element) -> Result<WidgetPara
                 widget_params.rect.w = FromStr::from_str(attr_value).unwrap();
                 widget_params.width = Some(FromStr::from_str(attr_value).unwrap());
             }
+            "margin" => {
+                widget_params.margin = Some(FromStr::from_str(attr_value).unwrap());
+            }
             "min" => {
                 widget_params.min = Some(FromStr::from_str(attr_value).unwrap());
             }
@@ -143,6 +147,7 @@ impl WidgetParams {
             label: None,
             height: None,
             width: None,
+            margin: None,
             text_size: None,
             msec: None,
             min: None,

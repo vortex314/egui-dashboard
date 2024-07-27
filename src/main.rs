@@ -26,7 +26,8 @@ use std::collections::HashMap;
 use std::env;
 use std::fmt::format;
 use std::io::BufRead;
-use std::sync::*;
+use std::sync::Mutex;
+use std::sync::Arc;
 use std::thread;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -36,7 +37,7 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::task;
 use tokio::task::block_in_place;
-use tokio::time::{self, Duration};
+use tokio::time::{self, sleep, Duration};
 use tokio_stream::StreamExt;
 
 use logger::*;
@@ -58,46 +59,7 @@ use limero::SourceTrait;
 use limero::*;
 mod config;
 use config::*;
-/*
-struct MessageHandler {
-    dashboard: Arc<Mutex<Dashboard>>,
-    cmds: Sink<PubSubEvent>,
-}
 
-impl MessageHandler {
-    fn new(dashboard: Arc<Mutex<Dashboard>>) -> Self {
-        Self {
-            dashboard,
-            cmds: Sink::new(100),
-        }
-    }
-}
-
-impl ActorTrait<PubSubEvent, ()> for MessageHandler {
-    async fn run(&mut self) {
-        loop {
-            let x = self.cmds.next().await;
-            match x {
-                Some(cmd) => match cmd {
-                    PubSubEvent::Publish { topic, payload } => {
-                        self.dashboard
-                            .lock()
-                            .unwrap()
-                            .update(WidgetMsg::Pub { topic, payload });
-                    }
-                    _ => {}
-                },
-                None => {
-                    warn!("Error in recv : None ");
-                }
-            }
-        }
-    }
-    fn sink_ref(&self) -> SinkRef<PubSubEvent> {
-        self.cmds.sink_ref()
-    }
-}
-*/
 fn start_pubsub_mqtt(
     cfg: &Element,
     event_sink: SinkRef<PubSubEvent>,
@@ -113,6 +75,26 @@ fn start_pubsub_mqtt(
     pubsub_cmd.push(PubSubCmd::Subscribe {
         topic: "**".to_string(),
     });*/
+    Ok(pubsub_cmd)
+}
+
+fn start_pubsub_zenoh(
+    cfg: &Element,
+    event_sink: SinkRef<PubSubEvent>,
+) -> Result<SinkRef<PubSubCmd>, String> {
+    let zenoh = cfg
+        .get_child("Zenoh", "")
+        .ok_or("Zenoh section not found")?;
+    let mut zenoh_actor = ZenohPubSubActor::new();
+    let pubsub_cmd = zenoh_actor.sink_ref();
+    zenoh_actor.add_listener(event_sink);
+    tokio::spawn(async move {
+        zenoh_actor.run().await;
+    });
+    pubsub_cmd.push(PubSubCmd::Connect);
+    pubsub_cmd.push(PubSubCmd::Subscribe {
+        topic: "**".to_string(),
+    });
     Ok(pubsub_cmd)
 }
 
@@ -150,8 +132,11 @@ async fn main() -> Result<(), MyError<'static>> {
     let pubsub_config = root_config
         .get_child("PubSub", "")
         .ok_or(MyError::Str("PubSub section not found"))?;
+    /*  let pubsub_cmd =
+    start_pubsub_mqtt(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;*/
+
     let pubsub_cmd =
-        start_pubsub_mqtt(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;
+        start_pubsub_zenoh(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;
 
     let dashboard_config = root_config
         .get_child("Dashboard", "")
@@ -163,11 +148,11 @@ async fn main() -> Result<(), MyError<'static>> {
         widgets.push(widget);
     }
 
-    let dashboard = Dashboard {
-        widgets:Arc::new(Mutex::new(widgets)),
+    let dashboard = Arc::new(Mutex::new(Dashboard {
+        widgets,
         pubsub_cmd,
-    };
-
+        context: None,
+    }));
 
     let db = dashboard.clone();
     tokio::spawn(async move {
@@ -175,11 +160,17 @@ async fn main() -> Result<(), MyError<'static>> {
             let m = event_sink.next().await;
             match m {
                 Some(PubSubEvent::Publish { topic, payload }) => {
-                    info!("Publishing topic {} payload {:?}", topic, payload);
-                    db.update(WidgetMsg::Pub { topic, payload });
+                    db.lock().unwrap().update(WidgetMsg::Pub { topic, payload });
                 }
                 _ => {}
             }
+        }
+    });
+    let db = dashboard.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            db.lock().unwrap().update(WidgetMsg::Tick);
         }
     });
 
@@ -187,30 +178,30 @@ async fn main() -> Result<(), MyError<'static>> {
     let _r = eframe::run_native(
         "Dashboard",
         native_options,
-        Box::new(|x| Ok(Box::new(DashboardApp::new(dashboard)))),
+        Box::new(|cc| {
+            let _ = dashboard
+                .try_lock().unwrap().set_context(cc.egui_ctx.clone());
+            Ok(Box::new(DashboardApp::new(dashboard)))
+        }),
     );
     info!("Exiting.");
     Ok(())
 }
 
-#[derive(Clone) ]
 pub struct Dashboard {
-    widgets: Arc<Mutex<Vec<Box<dyn PubSubWidget + Send>>>>,
+    widgets: Vec<Box<dyn PubSubWidget + Send>>,
     pubsub_cmd: SinkRef<PubSubCmd>,
+    context: Option<egui::Context>,
 }
 #[derive(Clone)]
 
 pub struct DashboardApp {
-    dashboard: Dashboard,
+    dashboard: Arc<Mutex<Dashboard>>,
 }
 
 impl DashboardApp {
-    fn new(dashboard: Dashboard) -> Self {
+    fn new(dashboard: Arc<Mutex<Dashboard>>) -> Self {
         Self { dashboard }
-    }
-
-    fn update(&mut self, widget_msg: WidgetMsg) {
-        self.dashboard.update(widget_msg);
     }
 }
 
@@ -221,19 +212,24 @@ impl eframe::App for DashboardApp {
         ctx.set_visuals(egui::Visuals::light());
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.dashboard.lock().unwrap().draw(ui);
+            self.dashboard.lock().unwrap().draw(ui); // not in an async context
         });
 
-        ctx.request_repaint_after(Duration::from_millis(10000)); // update timed out widgets
+        // ctx.request_repaint_after(Duration::from_millis(10000)); // update timed out widgets
     }
 }
 
 impl Dashboard {
-    fn new(pubsub_cmd: SinkRef<PubSubCmd>) -> Self {
+    fn new(pubsub_cmd: SinkRef<PubSubCmd>, context: egui::Context) -> Self {
         Self {
             widgets: Vec::new(),
             pubsub_cmd,
+            context: Some(context),
         }
+    }
+
+    fn set_context(&mut self, context: egui::Context) {
+        self.context = Some(context);
     }
 
     fn draw(&mut self, ui: &mut egui::Ui) {
@@ -244,7 +240,7 @@ impl Dashboard {
 
     fn update(&mut self, widget_msg: WidgetMsg) -> bool {
         let mut repaint = false;
-        self.widgets.lock().iter_mut().for_each(|widget| {
+        self.widgets.iter_mut().for_each(|widget| {
             if widget.update(&widget_msg) == WidgetResult::Update {
                 repaint = true
             };
@@ -297,6 +293,14 @@ fn create_widget(
     };
     match name {
         "Label" => Ok(Box::new(Label::new(rect, cfg))),
+        "Plot" => Ok(Box::new(Plot::new(rect, cfg))),
+        "Gauge" => Ok(Box::new(Gauge::new(rect, cfg))),
+        "Table" => Ok(Box::new(Table::new(rect, cfg))),
+        "ProgressH" => Ok(Box::new(ProgressH::new(rect, cfg))),
+        "BrokerAlive" => Ok(Box::new(BrokerAlive::new(rect, cfg, cmd_sender))),
+        "Button" => Ok(Box::new(Button::new(rect, cfg, cmd_sender))),
+        "Slider" => Ok(Box::new(Slider::new(rect, cfg, cmd_sender))),
+        "Space" => Ok(Box::new(Space::new(rect, cfg))),
         _ => Ok(Box::new(Label::new(rect, cfg))), //Err(format!("Unknown widget: {}", cfg.name)),
     }
 }
