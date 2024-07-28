@@ -2,6 +2,7 @@ pub mod mqtt_pubsub;
 
 pub mod zenoh_pubsub;
 
+use std::any::Any;
 use std::convert::Infallible;
 
 use data::Int;
@@ -60,6 +61,9 @@ pub fn payload_display(v: &Vec<u8>) -> String {
 pub fn payload_as_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
     let mut decoder = Decoder::new(payload);
     let v =  decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
+    if v.len() != 1 {
+        return Err(Error::end_of_input());
+    }
     match v[0] {
         Token::F16(f) => Ok(f as f64),
         Token::F32(f) => Ok(f as f64),
@@ -73,6 +77,6 @@ pub fn payload_as_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
         Token::I8(i) => Ok(i as f64),
         Token::U8(i) => Ok(i as f64),
         Token::Bool(b) => Ok(if b { 1.0 } else { 0.0 }),
-        _ => Err(Error::type_mismatch(decoder.datatype().unwrap())),
+        token => Err(Error::end_of_input()),
     }
 }

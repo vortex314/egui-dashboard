@@ -1,17 +1,19 @@
 <Config xmlns="">
     <PubSub>
-        <Mqtt host="pcthink.local" port="1883" pattern="#" encoding="json" />
-        <Redis host="limero.ddns.net" port="6379" pattern="*" />
+        <Mqtt url="mqtt://pcthink.local:1883/" pattern="#" encoding="json" />
+        <Redis host="pcthink.local" port="6379" pattern="*" />
         <Zenoh host="limero.ddns.net" port="7447" pattern="**" encoding="cbor" />
     </PubSub>
     <Dashboard w="1024" h="768" label="Prototype Dashboard" theme="light">
         <Col w="1024">
             <Row h="30">
                 <BrokerAlive w="50" label="ZENOH" />
-                <Button w="100" label="Test pub" dst="dst/esp32/sys/test" on="1" off="0" />
+                <Button w="100" label="ON" dst="src/esp32/sys/test" msg='on' />
+                <Button w="100" label="OFF" dst="src/esp32/sys/test" msg='off' />
+                <Button w="100" label="Switch" dst="dst/esp32/sys/test" src="src/esp32/sys/test" eval='msg_str=="on"' />
                 <Label w="100" label="Test sub" src="dst/esp32/sys/test" timeout="6000" />
                 <Label w="100" label="heap-size" src="src/esp32/sys/heap_free" timeout="6000" />
-                <Switch w="100" label="Switch" src="dst/esp32/sys/switch" on="1" off="0" />
+                <Label w="200" label="Uptime" src="src/esp32/sys/uptime" timeout="6000" eval="humantime(msg_f64)"/>
             </Row>
             <Row h="200">
                 <Label w="70" h="50" label=" 70 x 50 " src="src/esp32/sys/latency" />

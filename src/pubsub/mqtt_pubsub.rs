@@ -41,17 +41,18 @@ pub struct MqttPubSubActor {
     cmds: Sink<PubSubCmd>,
     events: Source<PubSubEvent>,
     url: String,
+    pattern: String,
 }
 
 impl MqttPubSubActor {
-    pub fn new() -> Self {
+    pub fn new(url:&str,pattern:&str) -> Self {
         //    let url = format!("mqtt://{}:{}/", "broker.emqx.io", "1883");
-        let url = format!("mqtt://{}:{}/", "pcthink.local", "1883");
         //       let url = format!("mqtt://{}:{}/", "test.mosquitto.org", "1883");
         MqttPubSubActor {
             cmds: Sink::new(100),
             events: Source::new(),
-            url,
+            url: url.to_string(),
+            pattern: pattern.to_string(),
         }
     }
 }
@@ -66,7 +67,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
         info!("Mqtt connecting {} ...  ", self.url);
         let subopts = Subscribe::new(vec![SubscribeTopic {
             qos: QoS::AtLeastOnce,
-            topic_path: "#".to_string(),
+            topic_path: self.pattern.clone(),
         }]);
 
         if client.connect().await.is_err() {
@@ -98,7 +99,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                         Some(PubSubCmd::Publish { topic, payload}) => {
                             let s = format!("{}", minicbor::display(payload.as_slice()));
 
-                            info!("Pub to MQTT : {}:{}", topic, s);
+                            // info!("Pub to MQTT : {}:{}", topic, s);
                             let _res = client.publish(&Publish::new(topic, payload)).await;
                         }
                         Some(PubSubCmd::Subscribe { topic }) => {
@@ -135,7 +136,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                         Ok(msg) => {
                             let topic = msg.topic().to_string();
                             let payload = Vec::from(msg.payload());
-                            info!(
+                            debug!(
                                 "Publish from Mqtt : {} => {} ",
                                 topic,
                                 payload_display(&payload)
@@ -144,6 +145,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                         }
                         Err(e) => {
                             error!("PubSubActor::run() error {:?} ",e);
+                            continue;
                         }
                     }
                 }

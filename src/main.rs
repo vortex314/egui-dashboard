@@ -26,8 +26,8 @@ use std::collections::HashMap;
 use std::env;
 use std::fmt::format;
 use std::io::BufRead;
-use std::sync::Mutex;
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::thread;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
@@ -64,7 +64,9 @@ fn start_pubsub_mqtt(
     cfg: &Element,
     event_sink: SinkRef<PubSubEvent>,
 ) -> Result<SinkRef<PubSubCmd>, String> {
-    let mut mqtt_actor = MqttPubSubActor::new();
+    let url = cfg.attr("url").unwrap_or("mqtt://pcthink.local:1883/");
+    let pattern = cfg.attr("pattern").unwrap_or("#");
+    let mut mqtt_actor = MqttPubSubActor::new(url,pattern);
     let pubsub_cmd = mqtt_actor.sink_ref();
     mqtt_actor.add_listener(event_sink);
     tokio::spawn(async move {
@@ -125,7 +127,7 @@ async fn main() -> Result<(), MyError<'static>> {
     let _ = logger::init();
     info!("Starting up. Reading config file {}.", &args.config);
 
-    let mut event_sink = limero::Sink::new(100);
+    let mut event_sink = limero::Sink::new(1000);
 
     let root_config = load_xml_file("./config.xml").map_err(MyError::Xml)?;
 
@@ -137,6 +139,9 @@ async fn main() -> Result<(), MyError<'static>> {
 
     let pubsub_cmd =
         start_pubsub_zenoh(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;
+   /*let pubsub_mqtt_config = pubsub_config.get_child("Mqtt", "").ok_or(MyError::Str("Mqtt section not found"))?;
+    let pubsub_cmd =
+        start_pubsub_mqtt(&pubsub_mqtt_config, event_sink.sink_ref()).map_err(MyError::String)?;*/
 
     let dashboard_config = root_config
         .get_child("Dashboard", "")
@@ -180,7 +185,9 @@ async fn main() -> Result<(), MyError<'static>> {
         native_options,
         Box::new(|cc| {
             let _ = dashboard
-                .try_lock().unwrap().set_context(cc.egui_ctx.clone());
+                .try_lock()
+                .unwrap()
+                .set_context(cc.egui_ctx.clone());
             Ok(Box::new(DashboardApp::new(dashboard)))
         }),
     );
@@ -215,7 +222,6 @@ impl eframe::App for DashboardApp {
             self.dashboard.lock().unwrap().draw(ui); // not in an async context
         });
 
-        // ctx.request_repaint_after(Duration::from_millis(10000)); // update timed out widgets
     }
 }
 
@@ -246,7 +252,9 @@ impl Dashboard {
             };
         });
         if repaint && self.context.is_some() {
-            self.context.as_ref().unwrap().request_repaint();
+           // self.context.as_ref().unwrap().request_repaint();
+           self.context.as_mut().map( |ctx| ctx .request_repaint_after(Duration::from_millis(50))); // update timed out widgets
+
         }
         repaint
     }

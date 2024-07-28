@@ -17,21 +17,49 @@ use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
+use super::Eval;
+
 pub struct Switch {
     rect: Rect,
     margin: f32,
     label: String,
     text: String,
     text_size: i32,
+    src_topic: String,
     dst_topic: String,
+    on_state: bool,
     sinkref_cmd: SinkRef<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
+    eval: Option<Eval>,
 }
 
 impl PubSubWidget for Switch {
     fn update(&mut self, event: &WidgetMsg) -> WidgetResult {
-        WidgetResult::NoEffect
+        match event {
+            WidgetMsg::Pub { topic, payload } => {
+                if *topic == self.src_topic {
+                    let value = payload_decode::<bool>(&payload);
+                    self.eval.as_mut().map(|ev| {
+                        ev.eval_bool(payload).map(|value| {
+                            self.on_state = value;
+                        })
+                    });
+                    self.expire_time = Instant::now() + self.expire_duration;
+                    WidgetResult::Update
+                } else {
+                    WidgetResult::NoEffect
+                }
+            }
+            WidgetMsg::Tick => {
+                if self.expired() {
+                    self.on_state = false;
+                    WidgetResult::Update
+                } else {
+                    WidgetResult::NoEffect
+                }
+            }
+        }
     }
 
     fn draw(&mut self, ui: &mut egui::Ui) {
@@ -42,20 +70,31 @@ impl PubSubWidget for Switch {
 impl Switch {
     pub fn new(rect: Rect, config: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
         let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
+        let eval = match &config.eval {
+            None => None,
+            Some(evals) => Eval::create(evals.clone()).ok(),
+        };
         Self {
             rect,
             margin: config.margin.unwrap_or(5) as f32,
             label: config.label.as_ref().unwrap_or(&config.name).clone(),
             text: String::new(),
             text_size: config.text_size.unwrap_or(20),
+            src_topic: config
+                .src_topic
+                .as_ref()
+                .unwrap_or(&String::from(""))
+                .clone(),
             dst_topic: config
                 .dst_topic
                 .as_ref()
                 .unwrap_or(&String::from(""))
                 .clone(),
+            on_state: false,
             sinkref_cmd,
             expire_time: Instant::now() + expire_duration,
             expire_duration,
+            eval,
         }
     }
 

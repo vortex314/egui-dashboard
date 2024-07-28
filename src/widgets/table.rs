@@ -72,8 +72,8 @@ impl PubSubWidget for Table {
         let mut builder = TableBuilder::new(&mut child_ui)
             .column(Column::initial(60.0))
             .column(Column::initial(80.0))
-            .column(Column::initial(160.0).resizable(true))
-            .column(Column::remainder().resizable(true))
+            .column(Column::initial(160.0).resizable(false))
+            .column(Column::remainder().resizable(false))
             .header(20.0, |mut header| {
                 header.col(|ui| {
                     if ui.heading("Count").clicked() {
