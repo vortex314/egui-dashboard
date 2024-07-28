@@ -245,7 +245,7 @@ impl Dashboard {
                 repaint = true
             };
         });
-        if repaint {
+        if repaint && self.context.is_some() {
             self.context.as_ref().unwrap().request_repaint();
         }
         repaint
@@ -297,10 +297,12 @@ fn create_widget(
         "Gauge" => Ok(Box::new(Gauge::new(rect, cfg))),
         "Table" => Ok(Box::new(Table::new(rect, cfg))),
         "ProgressH" => Ok(Box::new(ProgressH::new(rect, cfg))),
+        "ProgressV" => Ok(Box::new(ProgressV::new(rect, cfg))),
         "BrokerAlive" => Ok(Box::new(BrokerAlive::new(rect, cfg, cmd_sender))),
         "Button" => Ok(Box::new(Button::new(rect, cfg, cmd_sender))),
         "Slider" => Ok(Box::new(Slider::new(rect, cfg, cmd_sender))),
         "Space" => Ok(Box::new(Space::new(rect, cfg))),
+        "Switch" => Ok(Box::new(Switch::new(rect, cfg, cmd_sender))),
         _ => Ok(Box::new(Label::new(rect, cfg))), //Err(format!("Unknown widget: {}", cfg.name)),
     }
 }

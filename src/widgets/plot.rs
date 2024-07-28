@@ -42,10 +42,9 @@ impl PubSubWidget for Plot {
                 if self.src_topic != *topic {
                     WidgetResult::NoEffect
                 } else {
-                    self.value = payload_as_f64(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
+                    self.value = payload_as_f64(payload).unwrap_or(0.0);
                     self.timeseries.add(Instant::now(), self.value);
-                        WidgetResult::Update
-                    
+                    WidgetResult::Update
                 }
             }
             WidgetMsg::Tick => {
@@ -55,23 +54,21 @@ impl PubSubWidget for Plot {
                 WidgetResult::NoEffect
             }
         }
-
     }
-
-
 
     fn draw(&mut self, ui: &mut egui::Ui) {
         let id = Id::new(self.label.clone());
         draw_border(self.rect, ui);
         let s = format!("{} {}", self.value, self.unit);
-        let rect = inside_rect(self.rect,1.0);
+        let rect = inside_rect(self.rect, 1.0);
         self.timeseries.clean();
         let line_data = self.timeseries.get_series();
-        let earlier = Instant::now()-self.max_timespan;
+        let earlier = Instant::now() - self.max_timespan;
+        let now = Instant::now();
         let line_points: PlotPoints = line_data
             .iter()
             .map(|entry| {
-                let x = entry.time.duration_since(earlier).as_secs_f64();
+                let x = -now.duration_since(entry.time).as_secs_f64();
                 [x, entry.value]
             })
             .collect();
@@ -82,9 +79,9 @@ impl PubSubWidget for Plot {
             .show_axes(true)
             .show_grid(true);
         let layout = Layout::top_down(Align::LEFT);
-    //    info!("Plot {} : {:?}", self.label, self.rect);
-        let mut child_ui = ui.child_ui(self.rect, layout,None);
-        let _r  = pl.show(&mut child_ui, |plot_ui| {
+        //    info!("Plot {} : {:?}", self.label, self.rect);
+        let mut child_ui = ui.child_ui(self.rect, layout, None);
+        let _r = pl.show(&mut child_ui, |plot_ui| {
             plot_ui.line(line);
         });
     }
@@ -115,7 +112,8 @@ impl Plot {
                 config.name.clone(),
                 Duration::from_millis(config.max_timespan.unwrap_or(3000) as u64),
                 config.max_samples.unwrap_or(100) as usize,
-            ),        }
+            ),
+        }
     }
 
     fn expired(&self) -> bool {

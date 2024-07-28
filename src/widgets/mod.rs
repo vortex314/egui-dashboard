@@ -19,6 +19,10 @@ mod progress_h;
 pub use progress_h::ProgressH as ProgressH;
 mod slider;
 pub use slider::Slider as Slider;
+mod progress_v;
+pub use progress_v::ProgressV as ProgressV;
+mod switch;
+pub use switch::Switch as Switch;
 /*pub mod progress;
 pub mod button;
 pub mod slider;
@@ -58,4 +62,6 @@ pub fn draw_border(rect: egui::Rect,ui : &egui::Ui )  {
         Stroke::new(1.0, Color32::LIGHT_GRAY),
     ));
 }
+
+
 
