@@ -53,7 +53,8 @@ pub struct WidgetParams {
     pub timeout: Option<i32>,
     pub src_topic: Option<String>,
     pub dst_topic: Option<String>,
-    pub dst_msg: Option<String>,
+    pub dst_val: Option<String>,
+    pub src_val: Option<String>,
     pub pressed: Option<String>,
     pub released: Option<String>,
     pub prefix: Option<String>,
@@ -87,7 +88,8 @@ impl WidgetParams {
             timeout: None,
             src_topic: None,
             dst_topic: None,
-            dst_msg: None,
+            src_val: None,
+            dst_val: None,
             pressed: None,
             released: None,
             prefix: None,
@@ -121,8 +123,11 @@ pub fn get_widget_params(rect: WidgetRect, element: &Element) -> Result<WidgetPa
             "dst" => {
                 widget_params.dst_topic = Some(attr_value);
             }
-            "msg" => {
-                widget_params.dst_msg = Some(attr_value);
+            "src_val" => {
+                widget_params.src_val = Some(attr_value);
+            }
+            "dst_val" => {
+                widget_params.dst_val = Some(attr_value);
             }
             "pressed" => {
                 widget_params.pressed = Some(attr_value);
