@@ -11,8 +11,8 @@ pub use broker_alive::BrokerAlive;
 pub mod button;
 pub use button::Button;
 pub mod space;
-use log::info;
 use log::error;
+use log::info;
 use minicbor::decode;
 pub use space::Space;
 mod plot;
@@ -161,40 +161,96 @@ fn value_to_payload_1(value: &Value) -> Vec<u8> {
 }
 
 use crate::config::WidgetParams;
+pub type Payload = Vec<u8>;
 
-fn get_eval_or(cfg:&WidgetParams, key: &str, default: &str) -> Eval {
-    let eval = cfg.get(key).unwrap_or(&default.to_string());
+pub fn get_eval_or(cfg: &WidgetParams, key: &str, default: &str) -> Eval {
+    let default_str = default.to_string();
+    let eval = cfg.get(key).unwrap_or(&default_str);
     let r = Eval::create(eval.clone());
     match r {
         Ok(e) => e,
         Err(e) => {
-            error!("Failed to create eval for {} : {}", key, e);
+            error!("Failed to create eval for {} : {:?}", key, e);
             Eval::create(default.to_string()).unwrap()
         }
     }
 }
 
-fn get_values_or(cfg:&WidgetParams, key: &str, default: &str) -> Vec<Payload> {
-    let eval = cfg.get(key).unwrap_or(&default.to_string());
-    let node = evalexpr::build_operator_tree(&default).map_err(EvalError::EvalError)?;
-    match node {
-        Ok(value) => match value
-        {
-            Value::Tuple(x) => {
-                let mut v = Vec::new();
-                for i in x {
-                    v.push(value_to_payload_1(&i));
-                }
-                v
+pub fn get_values_or(cfg: &WidgetParams, key: &str, default: &str) -> Vec<Payload> {
+    let default_str = default.to_string();
+    let values_str = cfg.get(key).unwrap_or(&default_str);
+    let values_default = Value::try_from(default).unwrap();
+    match Value::try_from(values_str.clone()) {
+        Ok(value) => match value_to_payload_array(&value) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to create values for {} : {:?}", key, e);
+                let default_value = Value::try_from(default).unwrap();
+                value_to_payload_array(&default_value).unwrap()
             }
-            value => vec![value_to_payload_1(&value)],
         },
         Err(e) => {
-            error!("Failed to create eval for {} : {}", key, e);
+            error!("Failed to create values for {} : {:?}", key, e);
             let default_value = Value::try_from(default).unwrap();
-            vec![payload_encode(default)]
+            value_to_payload_array(&default_value).unwrap()
         }
     }
 }
 
-pub type Payload = Vec<u8>;
+pub fn get_value_or(cfg: &WidgetParams, key: &str, default: &str) -> Payload {
+    let default_str = default.to_string();
+    let value_str = cfg.get(key).unwrap_or(&default_str);
+    let value_default = Value::try_from(default).unwrap();
+
+    match Value::try_from(value_str.clone()) {
+        Ok(value) => value_to_payload(&value).unwrap(),
+        Err(e) => {
+            error!("Failed to create value for {} : {}", key, e);
+            let default_value = Value::try_from(default).unwrap();
+            value_to_payload(&default_value).unwrap()
+        }
+    }
+}
+
+pub fn value_to_payload_array(value: &Value) -> Result<Vec<Payload>, EvalError> {
+    match value {
+        Value::Tuple(a) => {
+            let mut v: Vec<Payload> = Vec::new();
+            for value in a {
+                match value_to_payload(&value) {
+                    Ok(p) => v.push(p),
+                    Err(e) => return Err(e),
+                }
+            }
+            Ok(v)
+        }
+        _ => Err(EvalError::ParseError),
+    }
+}
+
+pub fn value_to_payload(value: &Value) -> Result<Payload, EvalError> {
+    match value {
+        Value::String(s) => Ok(payload_encode(s)),
+        Value::Int(i) => Ok(payload_encode(i)),
+        Value::Float(f) => Ok(payload_encode(f)),
+        Value::Boolean(b) => Ok(payload_encode(b)),
+        Value::Tuple(a) => Err(EvalError::ParseError),
+        Value::Empty => Ok(Vec::new()),
+    }
+}
+
+pub fn expr_to_payload(default_value: &str) -> Result<Payload, EvalError> {
+    let values = Value::try_from(default_value).map_err(|_| EvalError::ParseError)?;
+    value_to_payload(&values)
+}
+
+pub fn expr_to_payload_with_default(
+    val_str: &Option<String>,
+    default_value: &str,
+) -> Result<Payload, EvalError> {
+    let default_payloads = expr_to_payload(default_value).unwrap();
+    match val_str {
+        Some(val) => expr_to_payload(&val),
+        None => Ok(default_payloads),
+    }
+}

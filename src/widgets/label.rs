@@ -14,6 +14,7 @@ use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
+use super::get_eval_or;
 use super::Eval;
 
 pub struct Label {
@@ -28,16 +29,16 @@ pub struct Label {
 }
 
 impl Label {
-    pub fn new(rect: Rect, config: &WidgetParams) -> Self {
+    pub fn new(rect: Rect, cfg: &WidgetParams) -> Self {
         Self {
             rect,
-            label: config.get_or("label", &config.name),
+            label: cfg.get_or("label", &cfg.name),
             text: String::new(),
-            text_size: config.get_or_default("text_size", 16),
-            src_topic: config.get_or("src_topic","undefined").clone(),
-            expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout",3000)),
-            expire_duration:Duration::from_millis(config.get_or_default("timeout",3000)),
-            eval:&config.get_eval_or("eval","msg_str"),
+            text_size: cfg.get_or_default("text_size", 16),
+            src_topic: cfg.get_or("src_topic","undefined").clone(),
+            expire_time: Instant::now() + Duration::from_millis(cfg.get_or_default("timeout",3000)),
+            expire_duration:Duration::from_millis(cfg.get_or_default("timeout",3000)),
+            eval:get_eval_or(cfg,"eval","msg_str"),
         }
     }
 
@@ -52,14 +53,15 @@ impl PubSubWidget for Label {
         match event {
             WidgetMsg::Pub { topic, payload } => {
                 if self.src_topic == *topic {
-                    self.text = self
+                    self.text = match self
                         .eval
-                        .as_mut()
-                        .map(|mut eval| {
-                            eval.eval_to_string(payload)
-                                .unwrap_or("failed conversion".to_string())
-                        })
-                        .unwrap_or(payload_display(payload));
+                        .eval_to_string(payload) {
+                            Ok(value) => value,
+                            Err(e) => {
+                                info!("Error evaluating expression: {:?}", e);
+                                payload_display(payload)
+                            }
+                        };
                     self.expire_time = Instant::now() + self.expire_duration;
                     WidgetResult::Update
                 } else {

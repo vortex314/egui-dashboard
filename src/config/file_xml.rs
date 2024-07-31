@@ -71,17 +71,6 @@ impl WidgetParams {
         self.props.get(key).map(|v| v.parse().unwrap_or(default)).unwrap_or(default)
     }
 
-    pub fn get_eval_or(&self,key: &str, default: &str) -> Eval {
-        let eval = self.props.get(key).unwrap_or(&default.to_string());
-        let r = Eval::create(eval.clone());
-        match r {
-            Ok(e) => e,
-            Err(e) => {
-                error!("Failed to create eval for {} : {}", key, e);
-                Eval::create(default.to_string()).unwrap()
-            }
-        }
-    }
 
 }
 

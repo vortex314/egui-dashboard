@@ -34,6 +34,43 @@ pub struct Plot {
     timeseries: timeseries::TimeSeries,
 }
 
+impl Plot {
+    pub fn new(rect: Rect, cfg: &WidgetParams) -> Self {
+        Self {
+            rect,
+            text: String::new(),
+            label: cfg.get_or("label", &cfg.name).clone(),
+            text_size: cfg.get_or_default("text_size", 16),
+            src_topic: cfg.get_or("src_topic", "undefined").clone(),
+            max_timespan: Duration::from_secs(cfg.get_or_default("max_time", 60)),
+            max_samples: cfg.get_or_default("max_samples", 10000),
+            expire_time: Instant::now()
+                + Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            min: cfg.get_or_default("min", 0.0),
+            max: cfg.get_or_default("max", 1.0),
+            value: 0.0,
+            unit: cfg.get_or("unit","").clone(),
+            timeseries: timeseries::TimeSeries::new(
+                cfg.name.clone(),
+                Duration::from_secs(cfg.get_or_default("max_time", 60)),
+                cfg.get_or_default("max_samples", 100)
+            ),
+        }
+    }
+
+    fn expired(&self) -> bool {
+        Instant::now() > self.expire_time
+    }
+
+    pub fn fraction(&self, value: f64) -> f32 {
+        let mut value = if value < self.min { self.min } else { value };
+        value = if value > self.max { self.max } else { value };
+        ((value - self.min) / (self.max - self.min)) as f32
+    }
+}
+
+
 impl PubSubWidget for Plot {
     fn update(&mut self, event: &WidgetMsg) -> WidgetResult {
         let previous_text = self.text.clone();
@@ -87,42 +124,3 @@ impl PubSubWidget for Plot {
     }
 }
 
-impl Plot {
-    pub fn new(rect: Rect, config: &WidgetParams) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
-        Self {
-            rect,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
-            text: String::new(),
-            text_size: config.text_size.unwrap_or(20),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
-            max_timespan: Duration::from_secs(config.max_timespan.unwrap_or(60) as u64),
-            max_samples: config.max_samples.unwrap_or(100) as usize,
-            min: config.min.unwrap_or(0.0),
-            max: config.max.unwrap_or(1.0),
-            value: 0.0,
-            unit: config.unit.as_ref().unwrap_or(&String::from("")).clone(),
-            timeseries: timeseries::TimeSeries::new(
-                config.name.clone(),
-                Duration::from_millis(config.max_timespan.unwrap_or(3000) as u64),
-                config.max_samples.unwrap_or(100) as usize,
-            ),
-        }
-    }
-
-    fn expired(&self) -> bool {
-        Instant::now() > self.expire_time
-    }
-
-    pub fn fraction(&self, value: f64) -> f32 {
-        let mut value = if value < self.min { self.min } else { value };
-        value = if value > self.max { self.max } else { value };
-        ((value - self.min) / (self.max - self.min)) as f32
-    }
-}

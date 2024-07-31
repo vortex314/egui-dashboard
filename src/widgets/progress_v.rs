@@ -110,23 +110,20 @@ impl PubSubWidget for ProgressV {
 }
 
 impl ProgressV {
-    pub fn new(rect: Rect, config: &WidgetParams) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
+    pub fn new(rect: Rect, cfg: &WidgetParams) -> Self {
 
         Self {
             rect,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
-            suffix: config.suffix.as_ref().unwrap_or(&String::from("")).clone(),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
-            min: config.min.unwrap_or(0.0),
-            max: config.max.unwrap_or(1.0),
-            value: config.min.unwrap_or(0.0),
+            label: cfg.get_or("label", &cfg.name).clone(),
+            suffix: cfg.get_or("label","").clone(),
+            src_topic: cfg.get_or("src_topic", "undefined").clone(),
+
+            expire_time: Instant::now()
+                + Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            min: cfg.get_or_default("min", 0.0),
+            max: cfg.get_or_default("max", 1.0),
+             value: 0.0,
         }
     }
 

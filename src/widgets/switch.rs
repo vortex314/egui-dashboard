@@ -17,6 +17,7 @@ use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
+use super::get_eval_or;
 use super::Eval;
 
 pub struct Switch {
@@ -31,7 +32,7 @@ pub struct Switch {
     sinkref_cmd: SinkRef<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
-    eval: Option<Eval>,
+    eval: Eval,
 }
 
 impl PubSubWidget for Switch {
@@ -40,11 +41,9 @@ impl PubSubWidget for Switch {
             WidgetMsg::Pub { topic, payload } => {
                 if *topic == self.src_topic {
                     let value = payload_decode::<bool>(&payload);
-                    self.eval.as_mut().map(|ev| {
-                        ev.eval_bool(payload).map(|value| {
+                    let _ = self.eval.eval_bool(payload).map(|value| {
                             self.on_state = value;
-                        })
-                    });
+                        });
                     self.expire_time = Instant::now() + self.expire_duration;
                     WidgetResult::Update
                 } else {
@@ -61,6 +60,7 @@ impl PubSubWidget for Switch {
             }
         }
     }
+    
 
     fn draw(&mut self, ui: &mut egui::Ui) {
         toggle_ui_compact(ui, &mut false);
@@ -68,33 +68,22 @@ impl PubSubWidget for Switch {
 }
 
 impl Switch {
-    pub fn new(rect: Rect, config: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
-        let eval = match &config.eval {
-            None => None,
-            Some(evals) => Eval::create(evals.clone()).ok(),
-        };
+    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
+
         Self {
             rect,
-            margin: config.margin.unwrap_or(5) as f32,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
+            margin: cfg.margin.unwrap_or(5) as f32,
+            label: cfg.get_or("label", &cfg.name).clone(),
             text: String::new(),
-            text_size: config.text_size.unwrap_or(20),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            dst_topic: config
-                .dst_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
+            text_size: cfg.get_or_default("text_size", 16),
+            src_topic: cfg.get_or("src_topic", "undefined").clone(),
+            dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
             on_state: false,
             sinkref_cmd,
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
-            eval,
+            expire_time: Instant::now()
+                + Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            eval: get_eval_or(cfg, "eval", "msg_str"),
         }
     }
 

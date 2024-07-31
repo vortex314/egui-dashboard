@@ -18,10 +18,12 @@ use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
+use super::get_eval_or;
+use super::get_value_or;
 use super::get_values_or;
 use super::Eval;
 use super::EvalError;
-use super::get_eval_or;
+use super::Payload;
 
 struct OnOff {
     on: Vec<u8>,
@@ -47,20 +49,18 @@ pub struct Button {
 }
 
 impl Button {
-    pub fn new(rect: Rect, config: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
-
-
+    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
         Self {
             rect,
-            margin: config.margin.unwrap_or(5) as f32,
-            label: config.get_or("label", &config.name).clone(),
-            text_size: config.get_or_default("text_size", 16),
-            src_topic: config.get_or("src_topic", "undefined").clone(),
-            dst_topic: config.get_or("dst_topic", "undefined").clone(),
+            margin: cfg.margin.unwrap_or(5) as f32,
+            label: cfg.get_or("label", &cfg.name).clone(),
+            text_size: cfg.get_or_default("text_size", 16),
+            src_topic: cfg.get_or("src_topic", "undefined").clone(),
+            dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
             text: String::new(),
-            src_val: get_eval_or(&config, "src_val", "true,false"),
-            dst_val: get_values_or(&config,"dst_eval", "msg_bool"),
-            on_state: if config.get_or("dst_topic", "").len() == 0  {
+            src_val: get_eval_or(&cfg, "src_eval", "msg_bool"),
+            dst_val: get_values_or(&cfg, "dst_val", "true,false"),
+            on_state: if cfg.get_or("dst_topic", "").len() == 0 {
                 true
             } else {
                 false
@@ -68,9 +68,9 @@ impl Button {
             enabled: true,
             sinkref_cmd,
             expire_time: Instant::now()
-                + Duration::from_millis(config.get_or_default("timeout", 3000)),
-            expire_duration: Duration::from_millis(config.get_or_default("timeout", 3000)),
-            eval: config.get_eval_or("eval", "msg_str"),
+                + Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+            eval: get_eval_or(cfg, "eval", "msg_str"),
         }
     }
 
@@ -84,12 +84,10 @@ impl PubSubWidget for Button {
         match event {
             WidgetMsg::Pub { topic, payload } => {
                 if *topic == self.src_topic {
-                    self.eval.as_mut().map(|ev| {
-                        let r = ev.eval_bool(payload).map(|value| {
-                            self.on_state = value;
-                        });
-                        info!("Eval result : {:?}", r);
+                    let _ = self.eval.eval_bool(payload).map(|value| {
+                        self.on_state = value;
                     });
+
                     self.expire_time = Instant::now() + self.expire_duration;
                     self.enabled = true;
                     WidgetResult::Update
@@ -141,47 +139,5 @@ impl PubSubWidget for Button {
                 });
             }
         });
-    }
-}
-
-pub enum Payload {
-    Single(Vec<u8>),
-    Array(Vec<Vec<u8>>),
-}
-
-pub fn value_to_payload(value: &Value) -> Result<Payload, EvalError> {
-    match value {
-        Value::String(s) => Ok(Payload::Single(payload_encode(s))),
-        Value::Int(i) => Ok(Payload::Single(payload_encode(i))),
-        Value::Float(f) => Ok(Payload::Single(payload_encode(f))),
-        Value::Boolean(b) => Ok(Payload::Single(payload_encode(b))),
-        Value::Tuple(a) => {
-            let mut v: Vec<Vec<u8>> = Vec::new();
-            for value in a {
-                match value_to_payload(&value) {
-                    Ok(Payload::Single(p)) => v.push(p),
-                    Ok(Payload::Array(p)) => v.extend(p),
-                    Err(e) => return Err(e),
-                }
-            }
-            Ok(Payload::Array(v))
-        }
-        Value::Empty => Ok(Payload::Single(Vec::new())),
-    }
-}
-
-fn expr_to_payload(default_value: &str) -> Result<Payload, EvalError> {
-    let values = Value::try_from(default_value).map_err(|_| EvalError::ParseError)?;
-    value_to_payload(&values)
-}
-
-fn expr_to_payload_with_default(
-    val_str: &Option<String>,
-    default_value: &str,
-) -> Result<Payload, EvalError> {
-    let default_payloads = expr_to_payload(default_value).unwrap();
-    match val_str {
-        Some(val) => expr_to_payload(&val),
-        None => Ok(default_payloads),
     }
 }

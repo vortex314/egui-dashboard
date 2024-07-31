@@ -58,27 +58,19 @@ impl PubSubWidget for Slider {
 }
 
 impl Slider {
-    pub fn new(rect: Rect, config: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
+    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
+        let expire_duration = Duration::from_millis(cfg.get_or_default("timeout",3000) as u64);
         Self {
             rect,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            dst_topic: config
-                .dst_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
+            label: cfg.get_or("label", cfg.name.as_str()).clone(),
+            src_topic: cfg.get_or("src_topic","undefined").clone(),
+            dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
             sinkref_cmd: sinkref_cmd,
             expire_time: Instant::now() + expire_duration,
             expire_duration,
-            min: config.min.unwrap_or(0.0),
-            max: config.max.unwrap_or(100.0),
-            unit: config.unit.as_ref().unwrap_or(&String::from("")).clone(),
+            min: cfg.get_or_default("min",0.0),
+            max: cfg.get_or_default("max",1.0),
+            unit: cfg.get_or("unit","").clone(),
             value: 0.0,
         }
     }
