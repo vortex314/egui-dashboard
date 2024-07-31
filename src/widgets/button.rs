@@ -18,8 +18,11 @@ use log::info;
 use std::time::Duration;
 use std::time::Instant;
 
+use super::get_values_or;
 use super::Eval;
 use super::EvalError;
+use super::get_eval_or;
+
 struct OnOff {
     on: Vec<u8>,
     off: Vec<u8>,
@@ -33,70 +36,41 @@ pub struct Button {
     text_size: i32,
     src_topic: String,
     dst_topic: String,
-    src_val: OnOff,
-    dst_val: OnOff,
+    src_val: Eval,
+    dst_val: Vec<Payload>,
     on_state: bool,
     enabled: bool,
     sinkref_cmd: SinkRef<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
-    eval: Option<super::Eval>,
+    eval: super::Eval,
 }
 
 impl Button {
     pub fn new(rect: Rect, config: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
-        let eval = match &config.eval {
-            None => None,
-            Some(evals) => Eval::create(evals.clone()).ok(),
-        };
-        let src_val = expr_to_payload_with_default(&config.src_val, "true,false")
-            .map(|val| match val {
-                Payload::Single(v) => Err(EvalError::ParseError),
-                Payload::Array(v) => Ok(OnOff {
-                    on: v[0].clone(),
-                    off: v[1].clone(),
-                }),
-            })
-            .unwrap();
-        let dst_val = expr_to_payload_with_default(&config.dst_val, "true,false")
-        .map(|val| match val {
-            Payload::Single(v) => Err(EvalError::ParseError),
-            Payload::Array(v) => Ok(OnOff {
-                on: v[0].clone(),
-                off: v[1].clone(),
-            }),
-        })
-            .unwrap();
+
 
         Self {
             rect,
             margin: config.margin.unwrap_or(5) as f32,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
+            label: config.get_or("label", &config.name).clone(),
+            text_size: config.get_or_default("text_size", 16),
+            src_topic: config.get_or("src_topic", "undefined").clone(),
+            dst_topic: config.get_or("dst_topic", "undefined").clone(),
             text: String::new(),
-            text_size: config.text_size.unwrap_or(20),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            dst_topic: config
-                .dst_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            src_val:src_val.unwrap(),
-            dst_val:dst_val.unwrap(),
-            on_state: if config.src_topic.is_none() {
+            src_val: get_eval_or(&config, "src_val", "true,false"),
+            dst_val: get_values_or(&config,"dst_eval", "msg_bool"),
+            on_state: if config.get_or("dst_topic", "").len() == 0  {
                 true
             } else {
                 false
             },
             enabled: true,
             sinkref_cmd,
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
-            eval,
+            expire_time: Instant::now()
+                + Duration::from_millis(config.get_or_default("timeout", 3000)),
+            expire_duration: Duration::from_millis(config.get_or_default("timeout", 3000)),
+            eval: config.get_eval_or("eval", "msg_str"),
         }
     }
 
@@ -163,7 +137,7 @@ impl PubSubWidget for Button {
             {
                 let _r = self.sinkref_cmd.push(PubSubCmd::Publish {
                     topic: self.dst_topic.clone(),
-                    payload: self.dst_val.on.clone(),
+                    payload: self.dst_val[0].clone(),
                 });
             }
         });
@@ -182,7 +156,7 @@ pub fn value_to_payload(value: &Value) -> Result<Payload, EvalError> {
         Value::Float(f) => Ok(Payload::Single(payload_encode(f))),
         Value::Boolean(b) => Ok(Payload::Single(payload_encode(b))),
         Value::Tuple(a) => {
-            let mut v:Vec<Vec<u8>> = Vec::new();
+            let mut v: Vec<Vec<u8>> = Vec::new();
             for value in a {
                 match value_to_payload(&value) {
                     Ok(Payload::Single(p)) => v.push(p),

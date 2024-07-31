@@ -1,4 +1,4 @@
-use std::{arch::x86_64, time::Duration};
+use std::time::Duration;
 
 use egui::{epaint::RectShape, Color32, Rounding, Stroke, Ui};
 /*pub mod status;
@@ -12,6 +12,7 @@ pub mod button;
 pub use button::Button;
 pub mod space;
 use log::info;
+use log::error;
 use minicbor::decode;
 pub use space::Space;
 mod plot;
@@ -161,7 +162,7 @@ fn value_to_payload_1(value: &Value) -> Vec<u8> {
 
 use crate::config::WidgetParams;
 
-fn get_eval_or(cfg;&WdgetParams, key: &str, default: &str) -> Eval {
+fn get_eval_or(cfg:&WidgetParams, key: &str, default: &str) -> Eval {
     let eval = cfg.get(key).unwrap_or(&default.to_string());
     let r = Eval::create(eval.clone());
     match r {
@@ -172,3 +173,28 @@ fn get_eval_or(cfg;&WdgetParams, key: &str, default: &str) -> Eval {
         }
     }
 }
+
+fn get_values_or(cfg:&WidgetParams, key: &str, default: &str) -> Vec<Payload> {
+    let eval = cfg.get(key).unwrap_or(&default.to_string());
+    let node = evalexpr::build_operator_tree(&default).map_err(EvalError::EvalError)?;
+    match node {
+        Ok(value) => match value
+        {
+            Value::Tuple(x) => {
+                let mut v = Vec::new();
+                for i in x {
+                    v.push(value_to_payload_1(&i));
+                }
+                v
+            }
+            value => vec![value_to_payload_1(&value)],
+        },
+        Err(e) => {
+            error!("Failed to create eval for {} : {}", key, e);
+            let default_value = Value::try_from(default).unwrap();
+            vec![payload_encode(default)]
+        }
+    }
+}
+
+pub type Payload = Vec<u8>;

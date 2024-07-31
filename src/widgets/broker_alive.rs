@@ -43,11 +43,11 @@ impl BrokerAlive {
         let topic = format!("dst/broker/alive/{}", random::<u32>());
         Self {
             rect,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
+            label: config.get_or("label",&config.name).clone(),
             src_topic: topic,
             sinkref_cmd : cmd_sink_ref,
-            expire_time: Instant::now() + Duration::from_millis(config.timeout.unwrap_or(3000) as u64),
-            expire_duration: Duration::from_millis(config.timeout.unwrap_or(3000) as u64),
+            expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout",3000)),
+            expire_duration: Duration::from_millis(config.get_or_default("timeout",3000)),
         }
     }
     fn expired(&self) -> bool {

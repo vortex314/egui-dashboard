@@ -66,14 +66,12 @@ impl PubSubWidget for Gauge {
 
 impl Gauge {
     pub fn new(rect: Rect, config: &WidgetParams) -> Self {
-        let expire_duration = Duration::from_millis(config.get_or_default("timeout",3000));
-
         Self {
             rect,
             label: config.get_or("label",&config.name).clone(),
             src_topic: config.get_or("src_topic","undefined").clone(),
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
+            expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout",3000)),
+            expire_duration: Duration::from_millis(config.get_or_default("timeout",3000)),
             min:config.get_or_default("min",0.0),
             max: config.get_or_default("max",1.0),
             value: 0.0,

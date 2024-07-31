@@ -24,22 +24,20 @@ pub struct Label {
     src_topic: String,
     expire_time: Instant,
     expire_duration: Duration,
-    eval: Option<Eval>,
+    eval: Eval,
 }
 
 impl Label {
     pub fn new(rect: Rect, config: &WidgetParams) -> Self {
-        let expire_duration = Duration::from_millis(config.get_or_default("timeout",3000));
-        let eval =  &config.get_or("eval","msg_str");
         Self {
             rect,
             label: config.get_or("label", &config.name),
             text: String::new(),
             text_size: config.get_or_default("text_size", 16),
             src_topic: config.get_or("src_topic","undefined").clone(),
-            expire_time: Instant::now() + expire_duration,
-            expire_duration,
-            eval,
+            expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout",3000)),
+            expire_duration:Duration::from_millis(config.get_or_default("timeout",3000)),
+            eval:&config.get_eval_or("eval","msg_str"),
         }
     }
 
