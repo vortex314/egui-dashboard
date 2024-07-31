@@ -170,7 +170,7 @@ impl PubSubWidget for Button {
     }
 }
 
-enum Payload {
+pub enum Payload {
     Single(Vec<u8>),
     Array(Vec<Vec<u8>>),
 }

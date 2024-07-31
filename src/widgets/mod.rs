@@ -158,3 +158,17 @@ fn value_to_payload_1(value: &Value) -> Vec<u8> {
         _ => vec![],
     }
 }
+
+use crate::config::WidgetParams;
+
+fn get_eval_or(cfg;&WdgetParams, key: &str, default: &str) -> Eval {
+    let eval = cfg.get(key).unwrap_or(&default.to_string());
+    let r = Eval::create(eval.clone());
+    match r {
+        Ok(e) => e,
+        Err(e) => {
+            error!("Failed to create eval for {} : {}", key, e);
+            Eval::create(default.to_string()).unwrap()
+        }
+    }
+}

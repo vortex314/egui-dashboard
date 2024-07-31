@@ -129,15 +129,11 @@ impl Table {
     pub fn new(rect: Rect, config: &WidgetParams) -> Self {
         Self {
             rect,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
-            text_size: config.text_size.unwrap_or(20),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
-            expire_time: Instant::now() + Duration::from_millis(config.timeout.unwrap_or(3000) as u64),
-            expire_duration: Duration::from_millis(config.timeout.unwrap_or(3000) as u64),
+            label: config.get_or("label",&config.name).clone(),
+            src_topic: config.get_or("src_topic","undefined").clone(),            
+            text_size: config.get_or_default("text_size",20),
+            expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout", 5000)),
+            expire_duration: Duration::from_millis(config.get_or_default("timeout", 5000)),
             table: sub_table::SubTable::new(),
             regex: Regex::new(r"").unwrap(),
             reverse:false,

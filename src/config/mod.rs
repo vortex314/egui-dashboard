@@ -10,7 +10,7 @@ pub mod file_xml;
 
 use file_change::FileChange;
 use file_xml::load_xml_file;
-use file_xml::WidgetParams;
+pub use file_xml::WidgetParams;
 
 
 

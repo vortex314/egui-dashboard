@@ -10,6 +10,7 @@ use evalexpr::Value;
 use log::{debug, error, info, trace, warn};
 use minicbor::decode;
 use minidom::Element;
+use std::collections::HashMap;
 use std::fs::File;
 use std::hash::Hash;
 use std::io::Error;
@@ -42,34 +43,10 @@ pub struct Eval {
 pub struct WidgetParams {
     pub name: String,
     pub rect: WidgetRect,
-    pub label: Option<String>,
+    pub props: HashMap<String, String>,
     pub height: Option<i32>,
     pub width: Option<i32>,
     pub margin: Option<i32>,
-    pub text_size: Option<i32>,
-    pub msec: Option<i32>,
-    pub min: Option<f64>,
-    pub max: Option<f64>,
-    pub timeout: Option<i32>,
-    pub src_topic: Option<String>,
-    pub dst_topic: Option<String>,
-    pub dst_val: Option<String>,
-    pub src_val: Option<String>,
-    pub pressed: Option<String>,
-    pub released: Option<String>,
-    pub prefix: Option<String>,
-    pub suffix: Option<String>,
-    pub unit: Option<String>,
-    pub ok: Option<String>,
-    pub ko: Option<String>,
-    pub url: Option<String>,
-    pub image: Option<String>,
-    pub on: Option<String>,
-    pub off: Option<String>,
-    pub children: Vec<WidgetParams>,
-    pub max_samples: Option<usize>,
-    pub max_timespan: Option<i32>,
-    pub eval: Option<String>,
 }
 
 impl WidgetParams {
@@ -77,36 +54,35 @@ impl WidgetParams {
         Self {
             name,
             rect,
-            label: None,
+            props: HashMap::new(),
             height: None,
             width: None,
             margin: None,
-            text_size: None,
-            msec: None,
-            min: None,
-            max: None,
-            timeout: None,
-            src_topic: None,
-            dst_topic: None,
-            src_val: None,
-            dst_val: None,
-            pressed: None,
-            released: None,
-            prefix: None,
-            suffix: None,
-            unit: None,
-            ok: None,
-            ko: None,
-            url: None,
-            image: None,
-            on: None,
-            off: None,
-            children: Vec::new(),
-            max_samples: None,
-            max_timespan: None,
-            eval: None,
         }
     }
+    pub fn get(&self,key: &str) -> Option<&String> {
+        self.props.get(key)
+    }
+    pub fn get_or(&self,key: &str, default: &str) -> String {
+        self.props.get(key).unwrap_or(&default.to_string()).to_string()
+    }
+
+    pub fn get_or_default<T>(&self,key: &str, default: T) -> T where T: FromStr + Copy {
+        self.props.get(key).map(|v| v.parse().unwrap_or(default)).unwrap_or(default)
+    }
+
+    pub fn get_eval_or(&self,key: &str, default: &str) -> Eval {
+        let eval = self.props.get(key).unwrap_or(&default.to_string());
+        let r = Eval::create(eval.clone());
+        match r {
+            Ok(e) => e,
+            Err(e) => {
+                error!("Failed to create eval for {} : {}", key, e);
+                Eval::create(default.to_string()).unwrap()
+            }
+        }
+    }
+
 }
 
 pub fn get_widget_params(rect: WidgetRect, element: &Element) -> Result<WidgetParams, String> {
@@ -114,48 +90,6 @@ pub fn get_widget_params(rect: WidgetRect, element: &Element) -> Result<WidgetPa
     for (attr_name, attr_value) in element.attrs() {
         let attr_value = attr_value.to_string();
         match attr_name {
-            "label" => {
-                widget_params.label = Some(attr_value);
-            }
-            "src" => {
-                widget_params.src_topic = Some(attr_value);
-            }
-            "dst" => {
-                widget_params.dst_topic = Some(attr_value);
-            }
-            "src_val" => {
-                widget_params.src_val = Some(attr_value);
-            }
-            "dst_val" => {
-                widget_params.dst_val = Some(attr_value);
-            }
-            "pressed" => {
-                widget_params.pressed = Some(attr_value);
-            }
-            "released" => {
-                widget_params.released = Some(attr_value);
-            }
-            "prefix" => {
-                widget_params.prefix = Some(attr_value);
-            }
-            "suffix" => {
-                widget_params.suffix = Some(attr_value);
-            }
-            "unit" => {
-                widget_params.unit = Some(attr_value);
-            }
-            "image" => {
-                widget_params.image = Some(attr_value);
-            }
-            "url" => {
-                widget_params.url = Some(attr_value);
-            }
-            "ok" => {
-                widget_params.ok = Some(attr_value);
-            }
-            "nok" => {
-                widget_params.ko = Some(attr_value);
-            }
             "h" => {
                 widget_params.rect.h = attr_value.parse().expect("Invalid height");
                 widget_params.height = Some(widget_params.rect.h);
@@ -167,38 +101,9 @@ pub fn get_widget_params(rect: WidgetRect, element: &Element) -> Result<WidgetPa
             "margin" => {
                 widget_params.margin = attr_value.parse().ok();
             }
-            "min" => {
-                widget_params.min = attr_value.parse().ok();
-            }
-            "max" => {
-                widget_params.max = attr_value.parse().ok();
-            }
-            "timeout" => {
-                widget_params.timeout = attr_value.parse().ok();
-            }
-            "msec" => {
-                widget_params.msec = attr_value.parse().ok();
-            }
-            "on" => {
-                widget_params.on = Some(attr_value);
-            }
-            "off" => {
-                widget_params.off = Some(attr_value);
-            }
-            "text_size" => {
-                widget_params.text_size = attr_value.parse().ok();
-            }
-            "samples" => {
-                widget_params.max_samples = attr_value.parse().ok();
-            }
-            "timespan" => {
-                widget_params.max_timespan = attr_value.parse().ok();
-            }
-            "eval" => {
-                widget_params.eval = Some(attr_value.to_string());
-            }
-            _ => {
-                error!("Unknown attribute: {}", attr_value);
+
+            key  => {
+                widget_params.props.insert(key.to_string(), attr_value);
             }
         };
     }
@@ -242,9 +147,8 @@ fn load_widgets(rect: WidgetRect, element: &Element) -> Result<Vec<WidgetParams>
     let mut rect = cfg.rect;
 
     info!(
-        "{} : {} {:?}",
+        "{} : {:?}",
         cfg.name,
-        cfg.label.as_ref().get_or_insert(&String::from("NO_LABEL")),
         cfg.rect
     );
 

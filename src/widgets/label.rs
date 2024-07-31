@@ -29,21 +29,14 @@ pub struct Label {
 
 impl Label {
     pub fn new(rect: Rect, config: &WidgetParams) -> Self {
-        let expire_duration = Duration::from_millis(config.timeout.unwrap_or(3000) as u64);
-        let eval = match &config.eval {
-            None => None,
-            Some( evals) => Eval::create(evals.clone()).ok(),
-        };
+        let expire_duration = Duration::from_millis(config.get_or_default("timeout",3000));
+        let eval =  &config.get_or("eval","msg_str");
         Self {
             rect,
-            label: config.label.as_ref().unwrap_or(&config.name).clone(),
+            label: config.get_or("label", &config.name),
             text: String::new(),
-            text_size: config.text_size.unwrap_or(20),
-            src_topic: config
-                .src_topic
-                .as_ref()
-                .unwrap_or(&String::from(""))
-                .clone(),
+            text_size: config.get_or_default("text_size", 16),
+            src_topic: config.get_or("src_topic","undefined").clone(),
             expire_time: Instant::now() + expire_duration,
             expire_duration,
             eval,
