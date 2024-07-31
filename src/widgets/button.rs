@@ -85,8 +85,8 @@ impl Button {
                 .as_ref()
                 .unwrap_or(&String::from(""))
                 .clone(),
-            src_val,
-            dst_val,
+            src_val:src_val.unwrap(),
+            dst_val:dst_val.unwrap(),
             on_state: if config.src_topic.is_none() {
                 true
             } else {

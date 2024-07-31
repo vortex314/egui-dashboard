@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{arch::x86_64, time::Duration};
 
 use egui::{epaint::RectShape, Color32, Rounding, Stroke, Ui};
 /*pub mod status;
@@ -142,12 +142,19 @@ impl Eval {
     }
 }
 
-fn value_to_payload(value: &Value) -> Vec<u8> {
+fn value_to_payload_1(value: &Value) -> Vec<u8> {
     match value {
         Value::Int(x) => payload_encode(x),
         Value::Float(x) => payload_encode(x),
         Value::Boolean(x) => payload_encode(x),
         Value::String(x) => payload_encode(x),
+        Value::Tuple(x) => {
+            let mut v = Vec::new();
+            for i in x {
+                v.extend(value_to_payload_1(i));
+            }
+            v
+        }
         _ => vec![],
     }
 }
