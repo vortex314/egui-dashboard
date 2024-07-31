@@ -4,6 +4,7 @@ use egui::{epaint::RectShape, Color32, Rounding, Stroke, Ui};
 /*pub mod status;
 pub mod gauge;*/
 pub mod label;
+use evalexpr::ValueType;
 use evalexpr::{ContextWithMutableFunctions, ContextWithMutableVariables, Value};
 pub use label::Label;
 pub mod broker_alive;
@@ -184,13 +185,12 @@ pub fn get_values_or(cfg: &WidgetParams, key: &str, default: &str) -> Vec<Payloa
         Ok(value) => match value_to_payload_array(&value) {
             Ok(v) => v,
             Err(e) => {
-                error!("Failed to create values for {} : {:?}", key, e);
-                let default_value = Value::try_from(default).unwrap();
-                value_to_payload_array(&default_value).unwrap()
+                error!("Failed to create values for {} : {:?} default {} value : {}", key, e, default,value);
+                value_to_payload_array(&values_default).unwrap()
             }
         },
         Err(e) => {
-            error!("Failed to create values for {} : {:?}", key, e);
+            error!("Failed to create values for {} : {:?} default {}", key, e, default);
             let default_value = Value::try_from(default).unwrap();
             value_to_payload_array(&default_value).unwrap()
         }
@@ -217,14 +217,21 @@ pub fn value_to_payload_array(value: &Value) -> Result<Vec<Payload>, EvalError> 
         Value::Tuple(a) => {
             let mut v: Vec<Payload> = Vec::new();
             for value in a {
+                info!("Value : {:?}", value);
                 match value_to_payload(&value) {
                     Ok(p) => v.push(p),
-                    Err(e) => return Err(e),
+                    Err(e) => {
+                        error!("Failed to create values for {:?} : {} type {:?} ", v, value, ValueType::from(value));
+                        return Err(e)
+                    }
                 }
             }
             Ok(v)
         }
-        _ => Err(EvalError::ParseError),
+        _ => {
+            error!("Failed to create values for {:?} : {:?} ", value, ValueType::from(value));
+            Err(EvalError::ParseError)
+        },
     }
 }
 

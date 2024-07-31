@@ -59,7 +59,7 @@ impl Button {
             dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
             text: String::new(),
             src_val: get_eval_or(&cfg, "src_eval", "msg_bool"),
-            dst_val: get_values_or(&cfg, "dst_val", "true,false"),
+            dst_val: get_values_or(&cfg, "dst_val", "(true,false)"),
             on_state: if cfg.get_or("dst_topic", "").len() == 0 {
                 true
             } else {

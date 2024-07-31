@@ -10,7 +10,7 @@
                 <BrokerAlive w="50" label="ZENOH" />
                 <Button w="100" label="ON" dst="src/esp32/sys/test" msg='on' />
                 <Button w="100" label="OFF" dst="src/esp32/sys/test" msg='off' />
-                <Button w="100" label="Switch" dst="dst/esp32/sys/test" dst_val='on,off' src="src/esp32/sys/test" src_eval='msg_str=="on"'/>
+                <Button w="100" label="Switch" dst="dst/esp32/sys/test" dst_val='(true,false)' src="src/esp32/sys/test" src_eval='msg_str=="on"'/>
                 <Label w="100" label="Test sub" src="dst/esp32/sys/test" timeout="6000" />
                 <Label w="100" label="heap-size" src="src/esp32/sys/heap_free" timeout="6000" />
                 <Label w="200" label="Uptime" src="src/esp32/sys/uptime" timeout="6000" eval="humantime(msg_f64)"/>
