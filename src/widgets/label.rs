@@ -35,9 +35,9 @@ impl Label {
             label: cfg.get_or("label", &cfg.name),
             text: String::new(),
             text_size: cfg.get_or_default("text_size", 16),
-            src_topic: cfg.get_or("src_topic","undefined").clone(),
-            expire_time: Instant::now() + Duration::from_millis(cfg.get_or_default("timeout",3000)),
-            expire_duration:Duration::from_millis(cfg.get_or_default("timeout",3000)),
+            src_topic: cfg.get_or("src","undefined").clone(),
+            expire_time: Instant::now() + Duration::from_millis(cfg.get_or_default("timeout",u64::MAX/2)),
+            expire_duration:Duration::from_millis(cfg.get_or_default("timeout",u64::MAX/2)),
             eval:get_eval_or(cfg,"eval","msg_str"),
         }
     }
@@ -58,7 +58,7 @@ impl PubSubWidget for Label {
                         .eval_to_string(payload) {
                             Ok(value) => value,
                             Err(e) => {
-                                info!("Error evaluating expression: {:?}", e);
+                                info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
                                 payload_display(payload)
                             }
                         };

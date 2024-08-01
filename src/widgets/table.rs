@@ -130,7 +130,7 @@ impl Table {
         Self {
             rect,
             label: config.get_or("label",&config.name).clone(),
-            src_topic: config.get_or("src_topic","undefined").clone(),            
+            src_topic: config.get_or("src","undefined").clone(),            
             text_size: config.get_or_default("text_size",20),
             expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout", 5000)),
             expire_duration: Duration::from_millis(config.get_or_default("timeout", 5000)),

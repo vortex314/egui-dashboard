@@ -63,8 +63,8 @@ impl Slider {
         Self {
             rect,
             label: cfg.get_or("label", cfg.name.as_str()).clone(),
-            src_topic: cfg.get_or("src_topic","undefined").clone(),
-            dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
+            src_topic: cfg.get_or("src","undefined").clone(),
+            dst_topic: cfg.get_or("dst", "undefined").clone(),
             sinkref_cmd: sinkref_cmd,
             expire_time: Instant::now() + expire_duration,
             expire_duration,

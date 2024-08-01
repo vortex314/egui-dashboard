@@ -77,7 +77,7 @@ impl ProgressH {
             rect,
             label: cfg.get_or("label", &cfg.name).clone(),
             suffix: cfg.get_or("label","").clone(),
-            src_topic: cfg.get_or("src_topic", "undefined").clone(),
+            src_topic: cfg.get_or("src", "undefined").clone(),
             expire_time: Instant::now()
                 + Duration::from_millis(cfg.get_or_default("timeout", 3000)),
             expire_duration: Duration::from_millis(cfg.get_or_default("timeout", 3000)),

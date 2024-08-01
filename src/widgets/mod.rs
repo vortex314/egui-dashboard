@@ -36,7 +36,7 @@ pub mod slider;
 pub mod table;
 pub mod plot;*/
 
-use crate::{payload_as_f64, payload_decode, payload_display, payload_encode, PubSubCmd};
+use crate::{payload_as_f64, payload_as_bool,payload_decode, payload_display, payload_encode, PubSubCmd};
 
 #[derive(PartialEq)]
 pub enum WidgetResult {
@@ -110,6 +110,8 @@ impl Eval {
     pub fn common_eval(&mut self, payload: &Vec<u8>) -> Result<Value, EvalError> {
         let v64 = payload_as_f64(&payload);
         let vstr = payload_decode::<String>(payload);
+        let m_bool = payload_as_bool(payload).map(|x| self.context.set_value("msg_bool".into(),Value::Boolean(x)));
+        self.context.clear_variables();
         if let Ok(v) = v64 {
             self.context
                 .set_value("msg_f64".into(), evalexpr::Value::Float(v))
@@ -180,18 +182,18 @@ pub fn get_eval_or(cfg: &WidgetParams, key: &str, default: &str) -> Eval {
 pub fn get_values_or(cfg: &WidgetParams, key: &str, default: &str) -> Vec<Payload> {
     let default_str = default.to_string();
     let values_str = cfg.get(key).unwrap_or(&default_str);
-    let values_default = Value::try_from(default).unwrap();
-    match Value::try_from(values_str.clone()) {
+    let values_default = evalexpr::eval(default).unwrap();
+    match evalexpr::eval(values_str.as_str()) {
         Ok(value) => match value_to_payload_array(&value) {
             Ok(v) => v,
             Err(e) => {
-                error!("Failed to create values for {} : {:?} default {} value : {}", key, e, default,value);
+                error!("Failed value_to_payload_array {}.{} : {:?} default {} value : {}", &cfg.name,key, e, default,value);
                 value_to_payload_array(&values_default).unwrap()
             }
         },
         Err(e) => {
             error!("Failed to create values for {} : {:?} default {}", key, e, default);
-            let default_value = Value::try_from(default).unwrap();
+            let default_value = evalexpr::eval(default).unwrap();
             value_to_payload_array(&default_value).unwrap()
         }
     }
@@ -200,13 +202,13 @@ pub fn get_values_or(cfg: &WidgetParams, key: &str, default: &str) -> Vec<Payloa
 pub fn get_value_or(cfg: &WidgetParams, key: &str, default: &str) -> Payload {
     let default_str = default.to_string();
     let value_str = cfg.get(key).unwrap_or(&default_str);
-    let value_default = Value::try_from(default).unwrap();
+    let value_default = evalexpr::eval(default).unwrap();
 
-    match Value::try_from(value_str.clone()) {
+    match evalexpr::eval(value_str.as_str()) {
         Ok(value) => value_to_payload(&value).unwrap(),
         Err(e) => {
             error!("Failed to create value for {} : {}", key, e);
-            let default_value = Value::try_from(default).unwrap();
+            let default_value = evalexpr::eval(default).unwrap();
             value_to_payload(&default_value).unwrap()
         }
     }
@@ -217,7 +219,6 @@ pub fn value_to_payload_array(value: &Value) -> Result<Vec<Payload>, EvalError> 
         Value::Tuple(a) => {
             let mut v: Vec<Payload> = Vec::new();
             for value in a {
-                info!("Value : {:?}", value);
                 match value_to_payload(&value) {
                     Ok(p) => v.push(p),
                     Err(e) => {
@@ -247,7 +248,7 @@ pub fn value_to_payload(value: &Value) -> Result<Payload, EvalError> {
 }
 
 pub fn expr_to_payload(default_value: &str) -> Result<Payload, EvalError> {
-    let values = Value::try_from(default_value).map_err(|_| EvalError::ParseError)?;
+    let values = evalexpr::eval(default_value).map_err(|_| EvalError::ParseError)?;
     value_to_payload(&values)
 }
 

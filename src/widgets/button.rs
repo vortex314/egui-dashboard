@@ -17,6 +17,7 @@ use evalexpr::Value;
 use log::info;
 use std::time::Duration;
 use std::time::Instant;
+use std::u64;
 
 use super::get_eval_or;
 use super::get_value_or;
@@ -55,12 +56,12 @@ impl Button {
             margin: cfg.margin.unwrap_or(5) as f32,
             label: cfg.get_or("label", &cfg.name).clone(),
             text_size: cfg.get_or_default("text_size", 16),
-            src_topic: cfg.get_or("src_topic", "undefined").clone(),
-            dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
+            src_topic: cfg.get_or("src", "undefined").clone(),
+            dst_topic: cfg.get_or("dst", "undefined").clone(),
             text: String::new(),
             src_val: get_eval_or(&cfg, "src_eval", "msg_bool"),
             dst_val: get_values_or(&cfg, "dst_val", "(true,false)"),
-            on_state: if cfg.get_or("dst_topic", "").len() == 0 {
+            on_state: if cfg.get_or("dst", "").len() == 0 {
                 true
             } else {
                 false
@@ -68,8 +69,8 @@ impl Button {
             enabled: true,
             sinkref_cmd,
             expire_time: Instant::now()
-                + Duration::from_millis(cfg.get_or_default("timeout", 3000)),
-            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", 3000)),
+                + Duration::from_millis(cfg.get_or_default("timeout", u64::MAX/2)),
+            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", u64::MAX/2)),
             eval: get_eval_or(cfg, "eval", "msg_str"),
         }
     }
@@ -133,9 +134,9 @@ impl PubSubWidget for Button {
                 )
                 .clicked()
             {
-                let _r = self.sinkref_cmd.push(PubSubCmd::Publish {
+                self.sinkref_cmd.push(PubSubCmd::Publish {
                     topic: self.dst_topic.clone(),
-                    payload: self.dst_val[0].clone(),
+                    payload: if self.on_state { self.dst_val[1].clone() } else { self.dst_val[0].clone() },
                 });
             }
         });

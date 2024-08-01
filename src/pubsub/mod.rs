@@ -76,7 +76,18 @@ pub fn payload_as_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
         Token::U64(i) => Ok(i as f64),
         Token::I8(i) => Ok(i as f64),
         Token::U8(i) => Ok(i as f64),
-        Token::Bool(b) => Ok(if b { 1.0 } else { 0.0 }),
+        token => Err(Error::end_of_input()),
+    }
+}
+
+pub fn payload_as_bool (payload: &Vec<u8>) -> Result<bool, decode::Error> {
+    let mut decoder = Decoder::new(payload);
+    let v =  decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
+    if v.len() != 1 {
+        return Err(Error::end_of_input());
+    }
+    match v[0] {
+        Token::Bool(b) => Ok(b),
         token => Err(Error::end_of_input()),
     }
 }

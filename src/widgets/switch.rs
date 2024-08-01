@@ -76,8 +76,8 @@ impl Switch {
             label: cfg.get_or("label", &cfg.name).clone(),
             text: String::new(),
             text_size: cfg.get_or_default("text_size", 16),
-            src_topic: cfg.get_or("src_topic", "undefined").clone(),
-            dst_topic: cfg.get_or("dst_topic", "undefined").clone(),
+            src_topic: cfg.get_or("src", "undefined").clone(),
+            dst_topic: cfg.get_or("dst", "undefined").clone(),
             on_state: false,
             sinkref_cmd,
             expire_time: Instant::now()

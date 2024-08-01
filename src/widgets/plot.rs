@@ -41,7 +41,7 @@ impl Plot {
             text: String::new(),
             label: cfg.get_or("label", &cfg.name).clone(),
             text_size: cfg.get_or_default("text_size", 16),
-            src_topic: cfg.get_or("src_topic", "undefined").clone(),
+            src_topic: cfg.get_or("src", "undefined").clone(),
             max_timespan: Duration::from_secs(cfg.get_or_default("max_time", 60)),
             max_samples: cfg.get_or_default("max_samples", 10000),
             expire_time: Instant::now()
