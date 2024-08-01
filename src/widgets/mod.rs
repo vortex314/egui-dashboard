@@ -229,10 +229,11 @@ pub fn value_to_payload_array(value: &Value) -> Result<Vec<Payload>, EvalError> 
             }
             Ok(v)
         }
-        _ => {
-            error!("Failed to create values for {:?} : {:?} ", value, ValueType::from(value));
-            Err(EvalError::ParseError)
-        },
+        Value::String(s) => Ok(vec![payload_encode(s)]),
+        Value::Int(i) => Ok(vec![payload_encode(i)]),
+        Value::Float(f) => Ok(vec![payload_encode(f)]),
+        Value::Boolean(b) => Ok(vec![payload_encode(b)]),
+        Value::Empty => Ok(Vec::new()),
     }
 }
 
