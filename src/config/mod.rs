@@ -8,7 +8,7 @@ pub mod file_change;
 pub mod file_xml;
 
 
-use file_change::FileChange;
+use file_change::FileChangeActor;
 use file_xml::load_xml_file;
 pub use file_xml::WidgetParams;
 

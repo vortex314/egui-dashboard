@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::time::Duration;
 
 use egui::{epaint::RectShape, Color32, Rounding, Stroke, Ui};
@@ -110,7 +111,7 @@ impl Eval {
     pub fn common_eval(&mut self, payload: &Vec<u8>) -> Result<Value, EvalError> {
         let v64 = payload_as_f64(&payload);
         let vstr = payload_decode::<String>(payload);
-        let m_bool = payload_as_bool(payload).map(|x| self.context.set_value("msg_bool".into(),Value::Boolean(x)));
+        let m_bool = payload_as_bool(payload);
         self.context.clear_variables();
         if let Ok(v) = v64 {
             self.context
@@ -120,6 +121,11 @@ impl Eval {
         if let Ok(v) = vstr {
             self.context
                 .set_value("msg_str".into(), evalexpr::Value::String(v))
+                .map_err(EvalError::EvalError)?;
+        };
+        if let Ok(v) = m_bool {
+            self.context
+                .set_value("msg_bool".into(), evalexpr::Value::Boolean(v))
                 .map_err(EvalError::EvalError)?;
         };
 
@@ -262,4 +268,25 @@ pub fn expr_to_payload_with_default(
         Some(val) => expr_to_payload(&val),
         None => Ok(default_payloads),
     }
+}
+
+fn major_ticks(min: f64, max: f64) -> VecDeque<f64> {
+    let log_max = max.log10().ceil();
+    println!(" min {} max {} log_max : {} ", min, max, log_max);
+    let start = 10.0_f64.powf(log_max);
+    let mut step = 10.0_f64.powf(log_max - 1.0);
+    let mut v = VecDeque::new();
+    loop {
+        let mut cursor = start;
+        v.clear();
+        while cursor >= min {
+            if cursor <= max {
+                v.push_front(cursor);
+            }
+            cursor -= step;
+        }
+        if v.len() > 3 { break; }
+        step = step / 10.0;
+    }
+    v
 }

@@ -58,7 +58,7 @@ impl PubSubWidget for Label {
                         .eval_to_string(payload) {
                             Ok(value) => value,
                             Err(e) => {
-                                info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
+                               // info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
                                 payload_display(payload)
                             }
                         };

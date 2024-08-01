@@ -8,24 +8,24 @@
         <Col w="1024">
             <Row h="30">
                 <BrokerAlive w="50" label="ZENOH" />
-                <Button w="100" label="ON" dst="src/esp32/sys/test" dst_val='true' />
-                <Button w="100" label="OFF" dst="src/esp32/sys/test" dst_val='false' />
-                <Button w="100" label="Switch" dst="dst/esp32/sys/test" dst_val='true,false' src="src/esp32/sys/test" src_eval='msg_bool'/>
-                <Label w="100" label="Test sub" src="dst/esp32/sys/test" timeout="6000" />
+                <Button w="40" label="ON" dst="src/esp32/sys/test" dst_val='true' />
+                <Button w="40" label="OFF" dst="src/esp32/sys/test" dst_val='false' />
+                <Switch w="100" label="Switch" dst="src/esp32/sys/test" dst_val='true,false' src="src/esp32/sys/test" src_eval='msg_bool' timeout="4000"/>
+                <Label w="100" label="Test sub" src="src/esp32/sys/test" timeout="6000" />
                 <Label w="100" label="heap-size" src="src/esp32/sys/heap_free" timeout="6000" />
-                <Label w="200" label="Uptime" src="src/esp32/sys/uptime" timeout="6000" eval="humantime(msg_f64)"/>
+                <Label w="200" label="Uptime" src="src/esp32/sys/uptime" timeout="3000" eval="humantime(msg_f64)"/>
             </Row>
-            <Row h="200">
-                <Label w="70" h="50" label=" 70 x 50 " src="src/esp32/sys/latency" />
-                <Table w="600" h="200" label="Table" src=".*" timeout="10000" />
+            <Row h="100">
+                <Label w="150" h="50" label=" 70 x 50 Hello world fhdklhgfsqhgqsjk" src="src/esp32/sys/latency" />
+                <Table w="500" label="Table" src=".*" timeout="10000" />
                 <Gauge w="150" label="Latency" src="src/esp32/sys/latency" suffix=" msec" timeout="100000" min="0" max="10" />
             </Row>
-            <Row h="270">
-                <ProgressV w="100" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
+            <Row h="300">
+                <ProgressV w="50" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
                 <ProgressV w="100" label="Latency" suffix="msec" src="dst/esp32/sys/slide" min="0.0" max="10.0"/>
                 <ProgressV w="100" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
                 <ProgressV w="100" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
-                <Plot label="Plot" unit="V" src="src/esp32/sys/latency" min="0.0" max="10.0" timespan="1000000" samples="10000" />
+                <Plot w="500" label="Plot" unit="V" src="src/esp32/sys/latency" min="0.0" max="10.0" timespan="1000000" samples="10000" />
             </Row>
             <Row h="30">
                 <Slider w="500" label="Slider" dst="dst/esp32/sys/slide" min="1.0" max="10.0" />

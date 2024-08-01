@@ -15,6 +15,8 @@ use egui::Layout;
 use egui::Pos2;
 use egui::Rect;
 use egui::RichText;
+use file_change::FileChangeActor;
+use file_change::FileChangeEvent;
 use file_xml::load_dashboard;
 use file_xml::load_xml_file;
 use file_xml::WidgetParams;
@@ -66,7 +68,7 @@ fn start_pubsub_mqtt(
 ) -> Result<SinkRef<PubSubCmd>, String> {
     let url = cfg.attr("url").unwrap_or("mqtt://pcthink.local:1883/");
     let pattern = cfg.attr("pattern").unwrap_or("#");
-    let mut mqtt_actor = MqttPubSubActor::new(url,pattern);
+    let mut mqtt_actor = MqttPubSubActor::new(url, pattern);
     let pubsub_cmd = mqtt_actor.sink_ref();
     mqtt_actor.add_listener(event_sink);
     tokio::spawn(async move {
@@ -100,6 +102,46 @@ fn start_pubsub_zenoh(
     Ok(pubsub_cmd)
 }
 
+pub fn start_file_change_actor(db: Arc<Mutex<Dashboard>>) -> Result<(), String> {
+    let file_name = "./config.xml".to_string();
+    let mut file_change_actor = FileChangeActor::new(file_name);
+    // File Change Actor
+
+    let mut file_change_actor = FileChangeActor::new("./config.xml".to_string());
+    file_change_actor.for_all(Box::new(move |x: FileChangeEvent| {
+        let mut binding = db.lock();
+        let res = binding.as_mut().map(|mut db| {
+            db.clear();
+            let file_name = "./config.xml".to_string();
+            let root_config = load_xml_file(&file_name).map_err(MyError::Xml).unwrap();
+            let dashboard_config = root_config
+                .get_child("Dashboard", "")
+                .ok_or(MyError::Str("Dashboard section not found"))
+                .unwrap();
+            let widgets_params = load_dashboard(&dashboard_config)
+                .map_err(MyError::String)
+                .unwrap();
+            for widget_params in widgets_params {
+                let widget = create_widget(&widget_params, db.pubsub_cmd.clone())
+                    .map_err(MyError::String)
+                    .unwrap();
+                db.add_widget(widget);
+            }
+        });
+        if res.is_err() {
+            error!("Error reloading config file {:?}", res);
+        }
+    }));
+
+    file_change_actor.trigger_file_change();
+
+
+    tokio::spawn(async move {
+        file_change_actor.run().await;
+    });
+    Ok(())
+}
+
 #[derive(Debug)]
 enum MyError<'a> {
     Io(std::io::Error),
@@ -130,7 +172,6 @@ async fn main() -> Result<(), MyError<'static>> {
     let mut event_sink = limero::Sink::new(1000);
 
     let root_config = load_xml_file("./config.xml").map_err(MyError::Xml)?;
-
     let pubsub_config = root_config
         .get_child("PubSub", "")
         .ok_or(MyError::Str("PubSub section not found"))?;
@@ -139,26 +180,16 @@ async fn main() -> Result<(), MyError<'static>> {
 
     let pubsub_cmd =
         start_pubsub_zenoh(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;
-   /*let pubsub_mqtt_config = pubsub_config.get_child("Mqtt", "").ok_or(MyError::Str("Mqtt section not found"))?;
-    let pubsub_cmd =
-        start_pubsub_mqtt(&pubsub_mqtt_config, event_sink.sink_ref()).map_err(MyError::String)?;*/
-
-    let dashboard_config = root_config
-        .get_child("Dashboard", "")
-        .ok_or(MyError::Str("Dashboard section not found"))?;
-    let widgets_params = load_dashboard(&dashboard_config).map_err(MyError::String)?;
-    let mut widgets = Vec::new();
-    for widget_params in widgets_params {
-        let widget = create_widget(&widget_params, pubsub_cmd.clone()).map_err(MyError::String)?;
-        widgets.push(widget);
-    }
 
     let dashboard = Arc::new(Mutex::new(Dashboard {
-        widgets,
+        widgets: Vec::new(),
         pubsub_cmd,
         context: None,
     }));
 
+    start_file_change_actor(dashboard.clone()).map_err(MyError::String)?;
+
+    // update widgets with PubSub event
     let db = dashboard.clone();
     tokio::spawn(async move {
         loop {
@@ -171,6 +202,7 @@ async fn main() -> Result<(), MyError<'static>> {
             }
         }
     });
+    // 1 second Ticker
     let db = dashboard.clone();
     tokio::spawn(async move {
         loop {
@@ -221,7 +253,6 @@ impl eframe::App for DashboardApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             self.dashboard.lock().unwrap().draw(ui); // not in an async context
         });
-
     }
 }
 
@@ -232,6 +263,14 @@ impl Dashboard {
             pubsub_cmd,
             context: Some(context),
         }
+    }
+
+    fn clear(&mut self) {
+        self.widgets.clear();
+    }
+
+    fn add_widget(&mut self, widget: Box<dyn PubSubWidget + Send>) {
+        self.widgets.push(widget);
     }
 
     fn set_context(&mut self, context: egui::Context) {
@@ -252,9 +291,11 @@ impl Dashboard {
             };
         });
         if repaint && self.context.is_some() {
-           // self.context.as_ref().unwrap().request_repaint();
-           self.context.as_mut().map( |ctx| ctx .request_repaint_after(Duration::from_millis(50))); // update timed out widgets
-
+            // self.context.as_ref().unwrap().request_repaint();
+            self.context
+                .as_mut()
+                .map(|ctx| ctx.request_repaint_after(Duration::from_millis(50)));
+            // update timed out widgets
         }
         repaint
     }

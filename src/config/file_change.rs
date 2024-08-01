@@ -10,14 +10,14 @@ pub enum FileChangeEvent {
     FileChange(String),
 }
 
-pub struct FileChange {
+pub struct FileChangeActor {
     file_name: String,
     events: Source<FileChangeEvent>,
     cmds: Sink<()>,
     timers: Timers,
 }
 
- impl FileChange {
+ impl FileChangeActor {
     pub fn new(file_name: String) -> Self {
         Self {
             file_name,
@@ -27,11 +27,15 @@ pub struct FileChange {
         }
     }
 
+    pub fn trigger_file_change(&mut self) {
+        self.events.emit(FileChangeEvent::FileChange("trigger".to_string()));
+    }
+
 }
 
-impl ActorTrait<(), FileChangeEvent> for FileChange {
+impl ActorTrait<(), FileChangeEvent> for FileChangeActor {
     async fn run(&mut self) {
-        
+
         let (mut sender,mut receiver ) = tokio::sync::mpsc::channel(10);
         let file_name = self.file_name.clone();
         thread::spawn(move || {
@@ -70,7 +74,7 @@ impl ActorTrait<(), FileChangeEvent> for FileChange {
     }
 }
 
-impl SourceTrait<FileChangeEvent> for FileChange {
+impl SourceTrait<FileChangeEvent> for FileChangeActor {
     fn add_listener(&mut self, listener: SinkRef<FileChangeEvent>) {
         self.events.add_listener(listener);
     }
