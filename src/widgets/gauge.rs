@@ -21,6 +21,7 @@ use std::time::Instant;
 pub struct Gauge {
     rect: Rect,
     label: String,
+    suffix : String,
     src_topic: String,
     value: f64,
     expire_time: Instant,
@@ -69,6 +70,7 @@ impl Gauge {
         Self {
             rect,
             label: config.get_or("label",&config.name).clone(),
+            suffix: config.get_or("suffix","").clone(),
             src_topic: config.get_or("src","undefined").clone(),
             expire_time: Instant::now() + Duration::from_millis(config.get_or_default("timeout",3000)),
             expire_duration: Duration::from_millis(config.get_or_default("timeout",3000)),
@@ -267,7 +269,7 @@ impl EguiGauge {
         ui.painter().text(
             self.center(rect),
             Align2::CENTER_CENTER,
-            self.value.to_string(),
+            self.value.to_string() ,
             FontId {
                 size: self.inner_width() / 5.0,
                 family: FontFamily::Monospace,
