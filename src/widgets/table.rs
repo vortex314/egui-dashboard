@@ -59,24 +59,32 @@ impl PubSubWidget for Table {
 
     fn draw(&mut self, ui: &mut egui::Ui) {
         let mut frame = Frame::default()
-            .stroke(egui::Stroke::new(1.0, Color32::WHITE))
+            .stroke(egui::Stroke::new(1.0, Color32::LIGHT_GRAY))
             .rounding(Rounding::ZERO)
             .shadow(egui::Shadow::NONE)
             .outer_margin(Margin::ZERO)
-            .inner_margin(Margin::same(5.0));
+            .inner_margin(Margin::ZERO)
+            .fill(egui::Color32::WHITE);
+        let rect = inside_rect(self.rect, 5.0);
         let window = Window::new(self.label.as_str())
             .id(egui::Id::new(self.label.as_str()))
             .collapsible(false)
             .title_bar(false)
             .resizable(false)
             .movable(false)
-            .default_pos(self.rect.min)
-            .fixed_rect(self.rect)
+            .default_pos(rect.min)
+            .fixed_rect(rect)
             .scroll([true, true])
             .frame(frame)
             .show(ui.ctx(), |ui| {
                 self.draw_table(ui);
-            });
+            })
+            .unwrap()
+            .response
+            .hover_pos();
+        if let Some(pos) = window {
+            info!("Table {} pos {:?}", self.label, pos);
+        }
     }
 }
 
@@ -97,7 +105,6 @@ impl Table {
     }
 
     pub fn draw_table(&mut self, ui: &mut egui::Ui) {
-
         let mut style = egui::Style::default();
         // small font
         // style.text_styles.insert(Body, FontId::new(12.0, Proportional));
@@ -107,11 +114,14 @@ impl Table {
         style.visuals.override_text_color = Some(Color32::BLACK);
         ui.set_style(style);
         let mut builder = TableBuilder::new(ui)
+            .vscroll(true)
+            .striped(true)
+            .sense(Sense::hover())
             .column(Column::initial(60.0))
             .column(Column::initial(80.0))
             .column(Column::initial(160.0))
             .column(Column::remainder().resizable(true))
-            .header(15.0, |mut header| {
+            .header(12.0, |mut header| {
                 header.col(|ui| {
                     if ui.heading("Count").clicked() {
                         self.table.order(OrderSort::Count, self.reverse);

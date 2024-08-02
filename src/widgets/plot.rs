@@ -53,8 +53,8 @@ impl Plot {
             unit: cfg.get_or("unit","").clone(),
             timeseries: timeseries::TimeSeries::new(
                 cfg.name.clone(),
-                Duration::from_secs(cfg.get_or_default("max_time", 60)),
-                cfg.get_or_default("max_samples", 100)
+                Duration::from_secs(cfg.get_or_default("timespan", 60)),
+                cfg.get_or_default("samples", 100)
             ),
         }
     }

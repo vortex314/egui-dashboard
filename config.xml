@@ -16,7 +16,7 @@
                 <Label w="200" label="Uptime" src="src/esp32/sys/uptime" timeout="3000" eval="humantime(msg_f64)"/>
             </Row>
             <Row h="100">
-                <Label w="150" h="50" label=" 70 x 50 Hello world fhdklhgfsqhgqsjk" src="src/esp32/sys/latency" />
+                <Label w="150" label=" 70 x 50 Hello world fhdklhgfsqhgqsjk" src="src/esp32/sys/latency" timeout="3000" />
                 <Table w="500" label="Table" src=".*" timeout="10000" />
                 <Gauge w="150" label="Latency" src="src/esp32/sys/latency" suffix=" msec" timeout="100000" min="0" max="10" />
             </Row>
@@ -25,11 +25,23 @@
                 <ProgressV w="100" label="Latency" suffix="msec" src="dst/esp32/sys/slide" min="0.0" max="10.0"/>
                 <ProgressV w="100" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
                 <ProgressV w="100" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
-                <Plot w="500" label="Plot" unit="V" src="src/esp32/sys/latency" min="0.0" max="10.0" timespan="1000000" samples="10000" />
+                <Plot  w="300" label="Plot" unit="V" src="src/esp32/sys/latency" min="0.0" max="10.0" timespan="1000000" samples="10000" />
             </Row>
             <Row h="30">
                 <Slider w="500" label="Slider" dst="dst/esp32/sys/slide" min="1.0" max="10.0" />
                 <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide" min="0.0" max="10.0" />
+            </Row>
+            <Row h="30">
+                <Slider w="500" label="Slider" dst="dst/esp32/sys/slide1" min="1.0" max="10.0" />
+                <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide1" min="0.0" max="10.0" />
+            </Row>
+            <Row h="30">
+                <Slider w="500" label="Slider" dst="dst/esp32/sys/slide2" min="1.0" max="10.0" />
+                <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide2" min="0.0" max="10.0" />
+            </Row>
+            <Row h="30">
+                <Slider w="500" label="Slider" dst="dst/esp32/sys/slide3" min="1.0" max="10.0" />
+                <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide3" min="0.0" max="10.0" />
             </Row>
 
         </Col>

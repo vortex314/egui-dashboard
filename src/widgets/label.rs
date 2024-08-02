@@ -1,5 +1,6 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
+use crate::inside_rect;
 use crate::payload_as_f64;
 use crate::payload_decode;
 use crate::payload_display;
@@ -35,10 +36,11 @@ impl Label {
             label: cfg.get_or("label", &cfg.name),
             text: String::new(),
             text_size: cfg.get_or_default("text_size", 16),
-            src_topic: cfg.get_or("src","undefined").clone(),
-            expire_time: Instant::now() + Duration::from_millis(cfg.get_or_default("timeout",u64::MAX/2)),
-            expire_duration:Duration::from_millis(cfg.get_or_default("timeout",u64::MAX/2)),
-            eval:get_eval_or(cfg,"eval","msg_str"),
+            src_topic: cfg.get_or("src", "undefined").clone(),
+            expire_time: Instant::now()
+                + Duration::from_millis(cfg.get_or_default("timeout", u64::MAX / 2)),
+            expire_duration: Duration::from_millis(cfg.get_or_default("timeout", u64::MAX / 2)),
+            eval: get_eval_or(cfg, "eval", "msg_str"),
         }
     }
 
@@ -53,15 +55,13 @@ impl PubSubWidget for Label {
         match event {
             WidgetMsg::Pub { topic, payload } => {
                 if self.src_topic == *topic {
-                    self.text = match self
-                        .eval
-                        .eval_to_string(payload) {
-                            Ok(value) => value,
-                            Err(e) => {
-                               // info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
-                                payload_display(payload)
-                            }
-                        };
+                    self.text = match self.eval.eval_to_string(payload) {
+                        Ok(value) => value,
+                        Err(e) => {
+                            // info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
+                            payload_display(payload)
+                        }
+                    };
                     self.expire_time = Instant::now() + self.expire_duration;
                     WidgetResult::Update
                 } else {
@@ -79,21 +79,22 @@ impl PubSubWidget for Label {
 
     fn draw(&mut self, ui: &mut egui::Ui) {
         let id = Id::new(self.label.clone());
-        draw_border(self.rect, ui);
+        let rect = inside_rect(self.rect, 3.0);
+        draw_border(rect, ui);
 
         if self.expired() {
             ui.painter().add(RectShape::filled(
-                self.rect,
+                rect,
                 Rounding::ZERO,
                 Color32::LIGHT_GRAY,
             ));
         } else {
             ui.painter()
-                .add(RectShape::filled(self.rect, Rounding::ZERO, Color32::WHITE));
+                .add(RectShape::filled(rect, Rounding::ZERO, Color32::WHITE));
         }
 
         ui.put(
-            self.rect,
+            rect,
             egui::Label::new(format!("{} {}", self.label.clone(), self.text.clone())),
         );
     }
