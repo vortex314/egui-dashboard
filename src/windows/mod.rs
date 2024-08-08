@@ -8,5 +8,5 @@ mod win_progress;
 pub use win_progress::WinProgress as WinProgress;
 mod win_topics;
 pub use win_topics::WinTopics as WinTopics;
-mod win_label;
-pub use win_label::WinLabel as WinLabel;
+mod pubsub_window;
+pub use pubsub_window::WinLabel as WinLabel;

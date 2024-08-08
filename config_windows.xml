@@ -6,11 +6,10 @@
     </PubSub>
     <Dashboard w="1024" h="768" label="Prototype Dashboard" theme="light">
         <Window h="300" w="700" x="100" y="100">
-            <Switch w="100" label="Switch" dst="src/esp32/sys/test" dst_val='true,false' src="src/esp32/sys/test" src_eval='msg_bool' timeout="4000"/>
+            <Switch label="Switch" dst="src/esp32/sys/test" dst_val='true,false' src="src/esp32/sys/test" src_eval='msg_bool' timeout="4000"/>
         </Window>
         <Window h="300" w="700" x="100" y="400">
-            <Label w="100" label="Test sub" src="src/esp32/sys/test" timeout="6000" />
+            <Label  label="Test sub" src="src/esp32/sys/test" timeout="6000" />
         </Window>
-
     </Dashboard>
 </Config>
