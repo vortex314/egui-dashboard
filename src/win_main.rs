@@ -7,33 +7,22 @@
 use clap::ColorChoice;
 use egui::*;
 use log::{self, info};
-mod logger;
-use logger::*;
 use std::{env, sync::Arc};
 use std::sync::Mutex;
-mod pubsub;
-use pubsub::{payload_decode, payload_display};
-mod zenoh_pubsub;
-use zenoh_pubsub::PubSubActor;
-use crate::pubsub::{PubSubCmd, PubSubEvent};
+
 
 mod limero;
 use limero::*;
 
-mod win_status;
-use win_status::*;
+mod windows;
+use windows::*;
 
-mod win_menu;
-use win_menu::*;
+mod pubsub;
+use pubsub::{payload_decode, payload_display,payload_as_f64};
+use pubsub::{PubSubCmd, PubSubEvent};
+use pubsub::zenoh_pubsub::ZenohPubSubActor;
+mod logger;
 
-mod win_topics;
-use win_topics::*;
-
-mod win_gauge;
-use win_gauge::*;
-
-mod win_progress;
-use win_progress::*;
 
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 2)]
@@ -54,18 +43,18 @@ async fn main() -> eframe::Result<()> {
     app.windows.try_lock().ok().unwrap().push(Box::new(WinMenu::new(windows)));
     let mut windows = app.windows().clone();
 
-    let mut pubsub = PubSubActor::new();
+    let mut pubsub = ZenohPubSubActor::new();
     pubsub.sink_ref().push(PubSubCmd::Subscribe {
         topic: "**".to_string(),
     });
     pubsub.for_all( Box::new(
        move  |event| {
             match event {
-                PubSubEvent::Publish { topic, message } => {
-                    info!("Publish {} {}", topic, payload_display(&message));
+                PubSubEvent::Publish { topic, payload } => {
+                    info!("Publish {} {}", topic, payload_display(&payload));
                     windows.lock().map(|mut windows| {
                         for window in windows.iter_mut() {
-                            window.on_message(&topic, &message);
+                            window.on_message(&topic, &payload);
                         }
                     }).unwrap();
 
@@ -116,6 +105,9 @@ pub enum MyAppCmd {
 }
 
 impl MyApp {
+    fn new(_cc: &eframe::CreationContext) -> Self {
+        Self::default()
+    }
     fn windows(&self) -> Arc<Mutex<Vec<Box<dyn PubSubWindow + Send >>>> {
         self.windows.clone()
     }

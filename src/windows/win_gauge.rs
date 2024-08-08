@@ -1,15 +1,22 @@
 use crate::payload_decode;
-use crate::pubsub::decode_f64;
+use crate::pubsub::payload_as_f64;
 use crate::MyAppCmd;
 use crate::PubSubWindow;
+
+use egui::epaint::ColorMode;
+use log::info;
+use minicbor::data::Int;
+use rand::Rng;
 use egui::Id;
 use egui::Rect;
 use egui::Rounding;
 use egui::Ui;
 use egui::Sense;
-use log::info;
-use minicbor::data::Int;
-use rand::Rng;
+use egui::{Align2, FontFamily, FontId,  Response, Shape};
+use crate::epaint::{Color32, PathShape, Pos2, Stroke};
+use crate::epaint::PathStroke;
+use std::f32::consts::PI;
+use std::ops::RangeInclusive;
 
 pub struct WinGauge {
     rect: Rect,
@@ -135,7 +142,7 @@ impl PubSubWindow for WinGauge {
 
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
         if topic == self.src_topic {
-            let new_value = decode_f64(payload).unwrap();
+            let new_value = payload_as_f64(payload).unwrap();
             self.current_value = Some(new_value);
             if self.min_value.is_none() {
                 self.min_value = Some(new_value);
@@ -158,10 +165,7 @@ impl PubSubWindow for WinGauge {
 ///! This crate contains a gauge UI element for use with `egui`
 ///! This gauge displays a numeric value in a manner that resembles a speedometer on a car
 ///
-use egui::{Align2, FontFamily, FontId, Rect, Response, Sense, Shape, Ui};
-use epaint::{Color32, PathShape, Pos2, Stroke};
-use std::f32::consts::PI;
-use std::ops::RangeInclusive;
+
 
 pub struct EguiGauge {
     value: f64,
@@ -400,7 +404,7 @@ impl EguiGauge {
             fill: bg_color,
             stroke: PathStroke {
                 width: 0.0,
-                color: bg_color,
+                color: ColorMode::TRANSPARENT,
             },
         }));
     }
@@ -418,7 +422,7 @@ impl EguiGauge {
             fill: self.color,
             stroke: PathStroke {
                 width: 0.0,
-                color: bg_color,
+                color: ColorMode::Solid(bg_color),
             },
         }));
     }
@@ -442,7 +446,7 @@ impl EguiGauge {
             fill: arc_bg_color,
             stroke: PathStroke {
                 width: 0.0,
-                color: bg_color,
+                color: ColorMode::Solid(bg_color),
             },
         }));
     }
@@ -471,7 +475,7 @@ impl EguiGauge {
             fill: bg_color,
             stroke: PathStroke {
                 width: 2.0,
-                color: bg_color,
+                color: ColorMode::Solid(bg_color),
             },
         }));
     }
@@ -480,7 +484,7 @@ impl EguiGauge {
         let desired_size = egui::vec2(self.size, self.size);
         let (rect, response) = ui.allocate_exact_size(desired_size, Sense::hover());
 
-        response.widget_info(|| egui::WidgetInfo::slider(self.value, &self.text));
+        response.widget_info(|| egui::WidgetInfo::slider(true,self.value, &self.text));
 
         if ui.is_rect_visible(rect) {
             self.paint(ui, rect);

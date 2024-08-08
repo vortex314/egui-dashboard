@@ -16,7 +16,7 @@
             "args": [
                 "run",
                 "--bin",
-                "widget"
+                "windows"
                 // "--debug",
                 // "--",
                 // "arg1"

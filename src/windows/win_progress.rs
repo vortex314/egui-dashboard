@@ -1,5 +1,5 @@
 use crate::payload_decode;
-use crate::pubsub::decode_f64;
+use crate::pubsub::payload_as_f64;
 use crate::MyAppCmd;
 use crate::PubSubWindow;
 use egui::*;
@@ -136,7 +136,7 @@ impl PubSubWindow for WinProgress {
 
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
         if topic == self.src_topic {
-            let new_value = decode_f64(payload).unwrap();
+            let new_value = payload_as_f64(payload).unwrap();
             self.current_value = Some(new_value);
             if self.min_value.is_none() {
                 self.min_value = Some(new_value);
