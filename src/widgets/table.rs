@@ -9,7 +9,6 @@ use crate::store::sub_table::OrderSort;
 use crate::store::timeseries;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
-use crate::MyError;
 use crate::WidgetMsg;
 use egui::containers::Frame;
 use egui::FontFamily::Proportional;

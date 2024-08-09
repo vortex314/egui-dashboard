@@ -1,6 +1,6 @@
-use crate::egui::Rect;
-use crate::payload_as_f64;
-use crate::payload_display;
+use egui::Rect;
+use crate::pubsub::payload_as_f64;
+use crate::pubsub::payload_display;
 use evalexpr::build_operator_tree;
 use evalexpr::ContextWithMutableFunctions;
 use evalexpr::ContextWithMutableVariables;

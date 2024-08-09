@@ -1,7 +1,8 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
-use crate::payload_decode;
-use crate::payload_display;
+use crate::pubsub::payload_decode;
+use crate::pubsub::payload_display;
+use crate::pubsub::payload_encode;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
 use crate::WidgetMsg;

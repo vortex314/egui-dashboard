@@ -14,8 +14,17 @@ use std::sync::Mutex;
 mod limero;
 use limero::*;
 
+mod widgets;
+use widgets::*;
+
 mod windows;
 use windows::*;
+
+mod config;
+use config::*;
+
+mod store;
+use store::*;
 
 mod pubsub;
 use pubsub::{payload_decode, payload_display,payload_as_f64};

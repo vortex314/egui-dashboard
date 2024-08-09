@@ -36,8 +36,12 @@ pub mod button;
 pub mod slider;
 pub mod table;
 pub mod plot;*/
-
-use crate::{payload_as_f64, payload_as_bool,payload_decode, payload_display, payload_encode, PubSubCmd};
+use crate::pubsub::payload_decode;
+use crate::pubsub::payload_display;
+use crate::pubsub::payload_encode;
+use crate::pubsub::payload_as_bool;
+use crate::pubsub::payload_as_f64;
+use crate::pubsub::PubSubCmd;
 
 #[derive(PartialEq)]
 pub enum WidgetResult {

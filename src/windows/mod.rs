@@ -9,4 +9,4 @@ pub use win_progress::WinProgress as WinProgress;
 mod win_topics;
 pub use win_topics::WinTopics as WinTopics;
 mod pubsub_window;
-pub use pubsub_window::WinLabel as WinLabel;
+pub use pubsub_window::PubSubWindow as PubSubWindow;
