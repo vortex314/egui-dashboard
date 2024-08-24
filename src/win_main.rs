@@ -30,6 +30,7 @@ mod pubsub;
 use pubsub::{payload_decode, payload_display,payload_as_f64};
 use pubsub::{PubSubCmd, PubSubEvent};
 use pubsub::zenoh_pubsub::ZenohPubSubActor;
+use pubsub::mqtt_pubsub::MqttPubSubActor;
 mod logger;
 
 
@@ -52,7 +53,8 @@ async fn main() -> eframe::Result<()> {
     app.windows.try_lock().ok().unwrap().push(Box::new(WinMenu::new(windows)));
     let mut windows = app.windows().clone();
 
-    let mut pubsub = ZenohPubSubActor::new();
+  //  let mut pubsub = ZenohPubSubActor::new();
+    let mut pubsub = MqttPubSubActor::new("mqtt://test.mosquitto.org", "test/#");
     pubsub.sink_ref().push(PubSubCmd::Subscribe {
         topic: "**".to_string(),
     });

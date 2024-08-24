@@ -34,8 +34,8 @@ tokio-util = { version ="0.7",default_features=false,features = ["codec"] }
 regex = "*"
 evalexpr = "11.3.0" # for expression evaluation
 humantime = "2.1.0" # for human readable time
-serde = { version="1.0",features = ["derive"]} 
-serde_yaml = "0.9.21" # for a yaml description
+serde = { version="1.0.208",features = ["derive"]} 
+serde_yaml = "0.9.33" # for a yaml description
 serde-xml-rs = { version="0.6.0" }
 minidom="*"
 zenoh = { version="*" }
@@ -43,3 +43,4 @@ minicbor = { version = "0.24.2", features=["derive","alloc","half"] }
 notify = "6.1.1"
 rand="*"
 emath = { version="0.28.1" }
+serde_json="*"

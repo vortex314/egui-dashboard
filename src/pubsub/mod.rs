@@ -5,6 +5,11 @@ pub mod zenoh_pubsub;
 use std::any::Any;
 use std::convert::Infallible;
 
+mod payload_cbor;
+mod payload_json;
+use payload_cbor::*;
+use payload_json::*;
+
 use data::Int;
 use decode::Error;
 use log::info;
@@ -13,6 +18,8 @@ use log::info;
 use minicbor::*;
 use minicbor::data::*;
 use zenoh::buffers::ZSliceBuffer;
+
+use anyhow::Result;
 
 #[derive(Clone,Debug)]
 pub enum PubSubCmd {
@@ -30,64 +37,78 @@ pub enum PubSubEvent {
     Publish { topic: String, payload: Vec<u8> },
 }
 
-pub fn payload_encode<X>( v: X) -> Vec<u8>
-where
-    X: Encode<()>,
-{
-    let mut buffer = Vec::<u8>::new();
-    let mut encoder = Encoder::new(&mut buffer);
-    let _x = encoder.encode(v);
-    _x.unwrap().writer().to_vec()
+pub trait PayloadCodec {
+    fn as_f64(v:&Vec<u8>) -> Result<f64> where Self:Sized;
+    fn as_bool(&self) -> Result<bool> where Self:Sized;
+    fn as_int(&self) -> Result<i64> where Self:Sized;
+    fn to_string(v:&Vec<u8>) -> Result<String> where Self:Sized;// => display as string
+    fn decode<T>(v: &Vec<u8>) -> Result<T> where Self:Sized;
+    fn encode<T>(v: &T) -> Vec<u8> where Self:Sized;
 }
 
-pub fn payload_decode<'a,T>(v: &'a Vec<u8>) -> Result<T, decode::Error>
-where T : Decode<'a,()>
-{
-    let mut decoder = Decoder::new(v);
-    decoder.decode::<T>()
+pub enum SerializationType {
+    JSON,
+    CBOR,
 }
 
-
-pub fn payload_display(v: &Vec<u8>) -> String {
-    let line:String  = v.iter().map(|b| format!("{:02X} ", b)).collect();
-    let s = format!("{}", minicbor::display(v.as_slice()));
-    if s.len() == 0 {
-        line
-    } else {
-        s
+impl dyn PayloadCodec {
+    pub fn from(codec: &str) -> Box<Self> {
+        match codec {
+            "json" => Box::new(Json {}),
+            "cbor" => Box::new(Cbor {}),
+            _ => Box::new(Json {}),
+        }
     }
 }
 
-pub fn payload_as_f64 (payload: &Vec<u8>) -> Result<f64, decode::Error> {
-    let mut decoder = Decoder::new(payload);
-    let v =  decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
-    if v.len() != 1 {
-        return Err(Error::end_of_input());
+struct Cbor {}
+
+impl PayloadCodec for Cbor {
+     fn as_f64(v: &Vec<u8>) -> Result<f64> {
+        payload_as_f64_cbor(v)
     }
-    match v[0] {
-        Token::F16(f) => Ok(f as f64),
-        Token::F32(f) => Ok(f as f64),
-        Token::F64(f) => Ok(f),
-        Token::I16(i) => Ok(i as f64),
-        Token::I32(i) => Ok(i as f64),
-        Token::I64(i) => Ok(i as f64),
-        Token::U16(i) => Ok(i as f64),
-        Token::U32(i) => Ok(i as f64),
-        Token::U64(i) => Ok(i as f64),
-        Token::I8(i) => Ok(i as f64),
-        Token::U8(i) => Ok(i as f64),
-        token => Err(Error::end_of_input()),
+     fn as_bool(v: &Vec<u8>) -> Result<bool> {
+        let f = payload_as_f64_cbor(v)?;
+        Ok(f != 0.0)
+    }
+     fn as_int(v: &Vec<u8>) -> Result<i64> {
+        let f = payload_as_f64_cbor(v)?;
+        Ok(f as i64)
+    }
+     fn to_string(v: &Vec<u8>) -> Result<String> {
+        Ok(payload_display_cbor(v))
+    }
+     fn decode<T>(v: &Vec<u8>) -> Result<T> {
+        payload_decode_cbor(v)
+    }
+     fn encode<T>(v: &T) -> Vec<u8> {
+        payload_encode_cbor(v)
     }
 }
 
-pub fn payload_as_bool (payload: &Vec<u8>) -> Result<bool, decode::Error> {
-    let mut decoder = Decoder::new(payload);
-    let v =  decoder.tokens().collect::<Result<Vec<Token>, _>>()?;
-    if v.len() != 1 {
-        return Err(Error::end_of_input());
+struct Json {}
+
+impl PayloadCodec for Json {
+     fn as_f64(v: &Vec<u8>) -> Result<f64> {
+        payload_as_f64_json(v)
     }
-    match v[0] {
-        Token::Bool(b) => Ok(b),
-        token => Err(Error::end_of_input()),
+     fn as_bool(v: &Vec<u8>) -> Result<bool> {
+        let f = payload_as_f64_json(v)?;
+        Ok(f != 0.0)
+    }
+     fn as_int(v: &Vec<u8>) -> Result<Int> {
+        let f = payload_as_f64_json(v)?;
+        Ok(f as Int)
+    }
+     fn to_string(v: &Vec<u8>) -> Result<String> {
+        Ok(payload_display_json(v))
+    }
+     fn decode<T>(v: &Vec<u8>) -> Result<T> {
+        payload_decode_json(v)
+    }
+     fn encode<T>(v: &T) -> Vec<u8> {
+        payload_encode_json(v)
     }
 }
+
+

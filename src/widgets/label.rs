@@ -1,9 +1,7 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::pubsub::payload_decode;
-use crate::pubsub::payload_display;
-use crate::pubsub::payload_encode;
+use crate::pubsub::PayloadCodec;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
 use crate::WidgetMsg;
@@ -27,6 +25,7 @@ pub struct Label {
     expire_time: Instant,
     expire_duration: Duration,
     eval: Eval,
+    codec: dyn PayloadCodec,
 }
 
 impl Label {
@@ -41,6 +40,7 @@ impl Label {
                 + Duration::from_millis(cfg.get_or_default("timeout", u64::MAX / 2)),
             expire_duration: Duration::from_millis(cfg.get_or_default("timeout", u64::MAX / 2)),
             eval: get_eval_or(cfg, "eval", "msg_str"),
+            codec: PayloadCodec::from(cfg.get_or("codec", "json")),
         }
     }
 
@@ -59,7 +59,7 @@ impl PubSubWidget for Label {
                         Ok(value) => value,
                         Err(e) => {
                             // info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
-                            payload_display(payload)
+                            self.codec.to_string(payload)
                         }
                     };
                     self.expire_time = Instant::now() + self.expire_duration;

@@ -18,7 +18,7 @@ use std::time::Duration;
 
 use crate::config::file_xml::WidgetParams;
 use crate::limero::{SinkRef, SinkTrait};
-use crate::pubsub::{payload_as_f64, payload_decode, payload_encode, PubSubCmd, PubSubEvent};
+use crate::pubsub::{PayloadCodec, PubSubCmd, PubSubEvent};
 use crate::WidgetMsg;
 use crate::WidgetResult;
 use tokio::sync::mpsc;

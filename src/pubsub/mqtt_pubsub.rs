@@ -1,4 +1,3 @@
-extern crate log;
 use log::{debug, error, info, trace, warn};
 use minicbor::decode::info;
 use serde_yaml::Value;
@@ -92,7 +91,7 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                             self.events.emit(PubSubEvent::Connected);
                         }
                         Some(PubSubCmd::Disconnect) => {
-                            info!("Disconnecting from zenoh");
+                            info!("Disconnecting from MQTT");
                             self.events.emit(PubSubEvent::Disconnected);
                             break;
                         }
