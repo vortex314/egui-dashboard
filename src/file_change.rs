@@ -67,13 +67,13 @@ impl ActorTrait<(), FileChangeEvent> for FileChange {
 
 
 
-    fn sink_ref(&self) -> SinkRef<()> {
+    fn sink_ref(&self) -> Endpoint<()> {
         self.cmds.sink_ref()
     }
 }
 
 impl SourceTrait<FileChangeEvent> for FileChange {
-    fn add_listener(&mut self, listener: SinkRef<FileChangeEvent>) {
+    fn add_listener(&mut self, listener: Endpoint<FileChangeEvent>) {
         self.events.add_listener(listener);
     }
 }

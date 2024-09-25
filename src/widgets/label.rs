@@ -1,7 +1,6 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::pubsub::PayloadCodec;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
 use crate::WidgetMsg;

@@ -53,19 +53,14 @@ use widgets::Label;
 
 use clap::Parser;
 use zenoh_pubsub::*;
-mod limero;
-use limero::ActorTrait;
-use limero::SinkRef;
-use limero::SinkTrait;
-use limero::SourceTrait;
 use limero::*;
 mod config;
 use config::*;
 
 fn start_pubsub_mqtt(
     cfg: &Element,
-    event_sink: SinkRef<PubSubEvent>,
-) -> Result<SinkRef<PubSubCmd>, String> {
+    event_sink: Endpoint<PubSubEvent>,
+) -> Result<Endpoint<PubSubCmd>, String> {
     let url = cfg.attr("url").unwrap_or("mqtt://pcthink.local:1883/");
     let pattern = cfg.attr("pattern").unwrap_or("#");
     let mut mqtt_actor = MqttPubSubActor::new(url, pattern);
@@ -84,8 +79,8 @@ fn start_pubsub_mqtt(
 
 fn start_pubsub_zenoh(
     cfg: &Element,
-    event_sink: SinkRef<PubSubEvent>,
-) -> Result<SinkRef<PubSubCmd>, String> {
+    event_sink: Endpoint<PubSubEvent>,
+) -> Result<Endpoint<PubSubCmd>, String> {
     let zenoh = cfg
         .get_child("Zenoh", "")
         .ok_or("Zenoh section not found")?;
@@ -229,7 +224,7 @@ async fn main() -> Result<(), MyError<'static>> {
 
 pub struct Dashboard {
     widgets: Vec<Box<dyn PubSubWidget + Send>>,
-    pubsub_cmd: SinkRef<PubSubCmd>,
+    pubsub_cmd: Endpoint<PubSubCmd>,
     context: Option<egui::Context>,
 }
 #[derive(Clone)]
@@ -257,7 +252,7 @@ impl eframe::App for DashboardApp {
 }
 
 impl Dashboard {
-    fn new(pubsub_cmd: SinkRef<PubSubCmd>, context: egui::Context) -> Self {
+    fn new(pubsub_cmd: Endpoint<PubSubCmd>, context: egui::Context) -> Self {
         Self {
             widgets: Vec::new(),
             pubsub_cmd,
@@ -327,7 +322,7 @@ impl Dashboard {
 
 fn create_widget(
     cfg: &WidgetParams,
-    cmd_sender: SinkRef<PubSubCmd>,
+    cmd_sender: Endpoint<PubSubCmd>,
 ) -> Result<Box<dyn PubSubWidget + Send>, String> {
     let name = cfg.name.as_str();
     let rect = Rect {

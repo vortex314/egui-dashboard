@@ -1,12 +1,9 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
 use crate::pubsub::PayloadCodec;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
-use crate::pubsub::PubSubCmd;
 use crate::widgets::WidgetMsg;
 use egui::containers::Frame;
 use egui::*;
@@ -38,13 +35,13 @@ pub struct Button {
     dst_topic: String,
     dst_val: Payload,
     enabled: bool,
-    sinkref_cmd: SinkRef<PubSubCmd>,
+    sinkref_cmd: Endpoint<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
 }
 
 impl Button {
-    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
+    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: Endpoint<PubSubCmd>) -> Self {
         Self {
             rect,
             margin: cfg.margin.unwrap_or(5) as f32,

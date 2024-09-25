@@ -17,8 +17,6 @@ use std::time::UNIX_EPOCH;
 use std::time::Duration;
 
 use crate::config::file_xml::WidgetParams;
-use crate::limero::{SinkRef, SinkTrait};
-use crate::pubsub::{PayloadCodec, PubSubCmd, PubSubEvent};
 use crate::WidgetMsg;
 use crate::WidgetResult;
 use tokio::sync::mpsc;
@@ -32,13 +30,13 @@ pub struct BrokerAlive {
     rect:Rect,
     label: String,
     src_topic: String,
-    sinkref_cmd : SinkRef<PubSubCmd>,
+    sinkref_cmd : Endpoint<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
 }
 
 impl BrokerAlive {
-    pub fn new(rect: Rect, config: &WidgetParams,cmd_sink_ref:SinkRef<PubSubCmd>) -> Self {
+    pub fn new(rect: Rect, config: &WidgetParams,cmd_sink_ref:Endpoint<PubSubCmd>) -> Self {
         // get random topic
         let topic = format!("dst/broker/alive/{}", random::<u32>());
         Self {

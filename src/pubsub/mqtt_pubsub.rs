@@ -26,19 +26,15 @@ use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio::select;
 
-use crate::limero::ActorTrait;
-use crate::limero::Sink;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
-use crate::limero::Source;
-use crate::limero::SourceTrait;
+use limero::*;
+use limero::Endpoint;
 
 use crate::pubsub::payload_display;
 use minicbor::display;
 
 pub struct MqttPubSubActor {
-    cmds: Sink<PubSubCmd>,
-    events: Source<PubSubEvent>,
+    cmds: CmdQueue<PubSubCmd>,
+    events: EventHandlers<PubSubEvent>,
     url: String,
     pattern: String,
 }
@@ -48,15 +44,15 @@ impl MqttPubSubActor {
         //    let url = format!("mqtt://{}:{}/", "broker.emqx.io", "1883");
         //       let url = format!("mqtt://{}:{}/", "test.mosquitto.org", "1883");
         MqttPubSubActor {
-            cmds: Sink::new(100),
-            events: Source::new(),
+            cmds: CmdQueue::new(100),
+            events: EventHandlers::new(),
             url: url.to_string(),
             pattern: pattern.to_string(),
         }
     }
 }
 
-impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
+impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
     async fn run(&mut self) {
         let mut client = Client::builder()
             .set_url_string(&self.url)
@@ -153,13 +149,11 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for MqttPubSubActor {
         error!("Exiting mqtt loop.")
     }
 
-    fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        self.cmds.sink_ref()
+    fn handler(&mut self) -> Box<dyn Handler<PubSubCmd>> {
+        self.cmds.handler()
     }
-}
 
-impl SourceTrait<PubSubEvent> for MqttPubSubActor {
-    fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
-        self.events.add_listener(sink);
+    fn add_listener(&mut self, listener : Box<dyn Handler<PubSubEvent>>) { 
+        self.events.add_listener(listener)
     }
 }

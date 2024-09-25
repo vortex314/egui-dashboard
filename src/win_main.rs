@@ -10,8 +10,6 @@ use log::{self, info};
 use std::{env, sync::Arc};
 use std::sync::Mutex;
 
-
-mod limero;
 use limero::*;
 
 mod widgets;

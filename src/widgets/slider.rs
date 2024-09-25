@@ -1,8 +1,7 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
+use limero::Endpoint;
 use crate::pubsub::payload_decode;
 use crate::pubsub::payload_display;
 use crate::pubsub::payload_encode;
@@ -22,7 +21,7 @@ pub struct Slider {
     label: String,
     src_topic: String,
     dst_topic: String,
-    sinkref_cmd: SinkRef<PubSubCmd>,
+    sinkref_cmd: Endpoint<PubSubCmd>,
     expire_time: Instant,
     expire_duration: Duration,
     min: f64,
@@ -58,7 +57,7 @@ impl PubSubWidget for Slider {
 }
 
 impl Slider {
-    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: SinkRef<PubSubCmd>) -> Self {
+    pub fn new(rect: Rect, cfg: &WidgetParams, sinkref_cmd: Endpoint<PubSubCmd>) -> Self {
         let expire_duration = Duration::from_millis(cfg.get_or_default("timeout",3000) as u64);
         Self {
             rect,

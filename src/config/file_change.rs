@@ -1,7 +1,7 @@
 use std::{path::Path, thread, time::Duration};
-use tokio::sync::{mpsc::{Receiver, Sender}};
+use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::limero::*;
+use limero::*;
 use log::*;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Result, Watcher};
 

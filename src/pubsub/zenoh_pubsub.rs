@@ -1,3 +1,5 @@
+use limero::CmdQueue;
+use limero::EventHandlers;
 use log::*;
 use std::collections::BTreeMap;
 use std::io;
@@ -10,12 +12,7 @@ use tokio::io::split;
 use tokio::io::AsyncReadExt;
 use tokio::select;
 
-use crate::limero::ActorTrait;
-use crate::limero::Sink;
-use crate::limero::SinkRef;
-use crate::limero::SinkTrait;
-use crate::limero::Source;
-use crate::limero::SourceTrait;
+use limero::*;
 
 use crate::pubsub::payload_display;
 use crate::pubsub::{PubSubCmd, PubSubEvent};
@@ -25,8 +22,8 @@ use zenoh::prelude::r#async::*;
 use zenoh::subscriber::Subscriber;
 
 pub struct ZenohPubSubActor {
-    cmds: Sink<PubSubCmd>,
-    events: Source<PubSubEvent>,
+    cmds: CmdQueue<PubSubCmd>,
+    events: EventHandlers<PubSubEvent>,
     config: zenoh::config::Config,
 }
 
@@ -43,14 +40,14 @@ impl ZenohPubSubActor {
             info!("Using zenohd.json5 file");
         }
         ZenohPubSubActor {
-            cmds: Sink::new(100),
-            events: Source::new(),
+            cmds: CmdQueue::new(100),
+            events: EventHandlers::new(),
             config: config.unwrap(),
         }
     }
 }
 
-impl ActorTrait<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
+impl Actor<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
     async fn run(&mut self) {
         let static_session: &'static mut Session =
             Session::leak(zenoh::open(config::default()).res().await.unwrap());
@@ -113,13 +110,13 @@ impl ActorTrait<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
         }
     }
 
-    fn sink_ref(&self) -> SinkRef<PubSubCmd> {
-        self.cmds.sink_ref()
+  fn handler(&mut self) -> EndPoint<PubSubCmd> {
+        self.cmds.handler()
+    }
+
+    fn add_listener(&mut self, listener : EndPoint<PubSubEvent>) { 
+        self.events.add_listener(listener)
     }
 }
 
-impl SourceTrait<PubSubEvent> for ZenohPubSubActor {
-    fn add_listener(&mut self, sink: SinkRef<PubSubEvent>) {
-        self.events.add_listener(sink);
-    }
-}
+

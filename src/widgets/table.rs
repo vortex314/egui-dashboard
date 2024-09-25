@@ -1,9 +1,6 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::payload_as_f64;
-use crate::payload_decode;
-use crate::payload_display;
 use crate::store::sub_table;
 use crate::store::sub_table::OrderSort;
 use crate::store::timeseries;
