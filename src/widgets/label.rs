@@ -9,6 +9,7 @@ use egui::*;
 use epaint::RectShape;
 use evalexpr::ContextWithMutableVariables;
 use log::info;
+use msg::payload_display;
 use std::time::Duration;
 use std::time::Instant;
 
@@ -24,7 +25,6 @@ pub struct Label {
     expire_time: Instant,
     expire_duration: Duration,
     eval: Eval,
-    codec: dyn PayloadCodec,
 }
 
 impl Label {
@@ -39,7 +39,6 @@ impl Label {
                 + Duration::from_millis(cfg.get_or_default("timeout", u64::MAX / 2)),
             expire_duration: Duration::from_millis(cfg.get_or_default("timeout", u64::MAX / 2)),
             eval: get_eval_or(cfg, "eval", "msg_str"),
-            codec: PayloadCodec::from(cfg.get_or("codec", "json")),
         }
     }
 
@@ -58,7 +57,7 @@ impl PubSubWidget for Label {
                         Ok(value) => value,
                         Err(e) => {
                             // info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
-                            self.codec.to_string(payload)
+                            payload_display(payload)
                         }
                     };
                     self.expire_time = Instant::now() + self.expire_duration;

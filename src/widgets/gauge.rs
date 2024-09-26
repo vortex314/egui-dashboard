@@ -1,10 +1,6 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::pubsub::payload_decode;
-use crate::pubsub::payload_display;
-use crate::pubsub::payload_encode;
-use crate::pubsub::payload_as_f64;
 use crate::store::timeseries;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
@@ -16,6 +12,8 @@ use epaint::ColorMode;
 use epaint::PathStroke;
 use epaint::RectShape;
 use log::info;
+use msg::payload_as_f64;
+use msg::payload_decode;
 use std::time::Duration;
 use std::time::Instant;
 

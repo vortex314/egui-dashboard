@@ -7,7 +7,6 @@ use std::fmt::Error;
 use std::thread::{self, sleep, Thread};
 
 //get_pos, get_size, value_string_default
-use crate::pubsub::{PubSubCmd, PubSubEvent};
 use mqtt_async_client::client::{Client, ReadResult, SubscribeTopic};
 use mqtt_async_client::client::{Publish, QoS, Subscribe};
 use tokio::sync::broadcast;
@@ -29,8 +28,9 @@ use tokio::select;
 use limero::*;
 use limero::Endpoint;
 
-use crate::pubsub::payload_display;
 use minicbor::display;
+use msg::{PubSubCmd, PubSubEvent};
+use msg::payload_display;
 
 pub struct MqttPubSubActor {
     cmds: CmdQueue<PubSubCmd>,
@@ -82,13 +82,13 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
             select! {
                 cmd = self.cmds.next() => {
                     match cmd {
-                        Some(PubSubCmd::Connect) => {
+                        Some(PubSubCmd::Connect { client_id:_ }) => {
                             info!("Connecting to MQTT");
-                            self.events.emit(PubSubEvent::Connected);
+                            self.events.handle(&PubSubEvent::Connected);
                         }
                         Some(PubSubCmd::Disconnect) => {
                             info!("Disconnecting from MQTT");
-                            self.events.emit(PubSubEvent::Disconnected);
+                            self.events.handle(&PubSubEvent::Disconnected);
                             break;
                         }
                         Some(PubSubCmd::Publish { topic, payload}) => {
@@ -136,7 +136,7 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                                 topic,
                                 payload_display(&payload)
                             );
-                            self.events.emit(PubSubEvent::Publish {topic,payload,}) ;
+                            self.events.handle(&PubSubEvent::Publish {topic,payload,}) ;
                         }
                         Err(e) => {
                             error!("PubSubActor::run() error {:?} ",e);
@@ -149,7 +149,7 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
         error!("Exiting mqtt loop.")
     }
 
-    fn handler(&mut self) -> Box<dyn Handler<PubSubCmd>> {
+    fn handler(&self) -> Box<dyn Handler<PubSubCmd>> {
         self.cmds.handler()
     }
 

@@ -1,6 +1,10 @@
 use limero::CmdQueue;
 use limero::EventHandlers;
 use log::*;
+use msg::payload_display;
+use msg::PubSubCmd;
+use msg::PubSubEvent;
+use tokio::sync::mpsc::Sender;
 use std::collections::BTreeMap;
 use std::io;
 use std::io::Write;
@@ -14,8 +18,6 @@ use tokio::select;
 
 use limero::*;
 
-use crate::pubsub::payload_display;
-use crate::pubsub::{PubSubCmd, PubSubEvent};
 use minicbor::display;
 use zenoh::open;
 use zenoh::prelude::r#async::*;
@@ -23,7 +25,7 @@ use zenoh::subscriber::Subscriber;
 
 pub struct ZenohPubSubActor {
     cmds: CmdQueue<PubSubCmd>,
-    events: EventHandlers<PubSubEvent>,
+    event_handlers: EventHandlers<PubSubEvent>,
     config: zenoh::config::Config,
 }
 
@@ -41,9 +43,13 @@ impl ZenohPubSubActor {
         }
         ZenohPubSubActor {
             cmds: CmdQueue::new(100),
-            events: EventHandlers::new(),
+            event_handlers: EventHandlers::new(),
             config: config.unwrap(),
         }
+    }
+
+    pub fn sender(&self) -> Sender<PubSubCmd> {
+        self.cmds.sender()
     }
 }
 
@@ -56,13 +62,13 @@ impl Actor<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
             select! {
                 cmd = self.cmds.next() => {
                     match cmd {
-                        Some(PubSubCmd::Connect) => {
+                        Some(PubSubCmd::Connect { client_id:_}) => {
                             info!("Connecting to zenoh");
-                            self.events.emit(PubSubEvent::Connected);
+                            self.event_handlers.handle(&PubSubEvent::Connected);
                         }
                         Some(PubSubCmd::Disconnect) => {
                             info!("Disconnecting from zenoh");
-                            self.events.emit(PubSubEvent::Disconnected);
+                            self.event_handlers.handle(&PubSubEvent::Disconnected);
                         }
                         Some(PubSubCmd::Publish { topic, payload}) => {
                             info!("To zenoh: {}:{}", topic,payload_display(&payload));
@@ -99,7 +105,7 @@ impl Actor<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
                             let payload = msg.payload.contiguous().to_vec();
                             info!("From zenoh: {}:{}", topic,payload_display(&payload));
                             let event = PubSubEvent::Publish { topic, payload };
-                            self.events.emit(event);
+                            self.event_handlers.handle(&event);
                         }
                         Err(e) => {
                             info!("PubSubActor::run() error {} ",e);
@@ -110,12 +116,12 @@ impl Actor<PubSubCmd, PubSubEvent> for ZenohPubSubActor {
         }
     }
 
-  fn handler(&mut self) -> EndPoint<PubSubCmd> {
+  fn handler(&self) -> Box<dyn limero::Handler<PubSubCmd>> {
         self.cmds.handler()
     }
 
-    fn add_listener(&mut self, listener : EndPoint<PubSubEvent>) { 
-        self.events.add_listener(listener)
+    fn add_listener(&mut self, listener : Box<dyn limero::Handler<PubSubEvent> + 'static>) { 
+        self.event_handlers.add_listener(listener)
     }
 }
 

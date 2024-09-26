@@ -10,6 +10,7 @@ use egui::*;
 use egui_plot::PlotPoints;
 use epaint::RectShape;
 use log::info;
+use msg::payload_as_f64;
 use std::time::Duration;
 use std::time::Instant;
 

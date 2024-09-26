@@ -37,7 +37,7 @@ pub mod slider;
 pub mod table;
 pub mod plot;*/
 
-use msg::PubSubCmd;
+use msg::{payload_as_f64, payload_decode, payload_encode, PubSubCmd};
 
 #[derive(PartialEq)]
 pub enum WidgetResult {
@@ -111,7 +111,7 @@ impl Eval {
     pub fn common_eval(&mut self, payload: &Vec<u8>) -> Result<Value, EvalError> {
         let v64 = payload_as_f64(&payload);
         let vstr = payload_decode::<String>(payload);
-        let m_bool = payload_as_bool(payload);
+        let m_bool = payload_decode::<bool>(payload);
         self.context.clear_variables();
         if let Ok(v) = v64 {
             self.context

@@ -1,11 +1,10 @@
-use crate::payload_decode;
-use crate::pubsub::payload_as_f64;
 use crate::MyAppCmd;
 use crate::PubSubWindow;
 
 use egui::epaint::ColorMode;
 use log::info;
 use minicbor::data::Int;
+use msg::payload_as_f64;
 use rand::Rng;
 use egui::Id;
 use egui::Rect;

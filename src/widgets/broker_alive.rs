@@ -5,7 +5,11 @@ use egui::Id;
 use egui::Rect;
 use egui::Rounding;
 use egui::Widget;
+use limero::Endpoint;
+use limero::Handler;
 use log::info;
+use msg::payload_encode;
+use msg::PubSubCmd;
 use rand::random;
 use serde_yaml::Value;
 use std::cell::RefCell;
@@ -25,12 +29,11 @@ use tokio::sync::mpsc;
 
 use super::PubSubWidget;
 
-#[derive(Clone)]
 pub struct BrokerAlive {
     rect:Rect,
     label: String,
     src_topic: String,
-    sinkref_cmd : Endpoint<PubSubCmd>,
+    sinkref_cmd : Box<dyn Handler<PubSubCmd>>,
     expire_time: Instant,
     expire_duration: Duration,
 }
@@ -84,9 +87,9 @@ impl PubSubWidget for BrokerAlive {
                 }
             }
             WidgetMsg::Tick => {
-                self.sinkref_cmd.push(PubSubCmd::Publish {
+                self.sinkref_cmd.handle(&PubSubCmd::Publish {
                     topic: self.src_topic.clone(),
-                    payload: payload_encode("OK"),
+                    payload: payload_encode(&"OK".to_string()),
                 });
 
             }

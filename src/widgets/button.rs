@@ -1,7 +1,6 @@
 use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
-use crate::pubsub::PayloadCodec;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
 use crate::widgets::WidgetMsg;
@@ -9,7 +8,10 @@ use egui::containers::Frame;
 use egui::*;
 use epaint::RectShape;
 use evalexpr::Value;
+use limero::Endpoint;
 use log::info;
+use minicbor::decode::info;
+use msg::PubSubCmd;
 use std::time::Duration;
 use std::time::Instant;
 use std::u64;
@@ -86,7 +88,8 @@ impl PubSubWidget for Button {
             )
             .clicked()
         {
-            self.sinkref_cmd.push(PubSubCmd::Publish {
+            info!("Button clicked {}", self.label);
+            self.sinkref_cmd.handle(&PubSubCmd::Publish {
                 topic: self.dst_topic.clone(),
                 payload: self.dst_val.clone(),
             });

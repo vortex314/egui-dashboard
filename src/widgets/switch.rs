@@ -2,12 +2,9 @@ use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
 use limero::Endpoint;
-use crate::pubsub::payload_decode;
-use crate::pubsub::payload_display;
-use crate::pubsub::payload_encode;
+use msg::PubSubCmd;
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
-use crate::PubSubCmd;
 use crate::WidgetMsg;
 use egui::containers::Frame;
 use egui::*;
@@ -133,7 +130,7 @@ impl PubSubWidget for Switch {
                 )
                 .clicked()
             {
-                self.sinkref_cmd.push(PubSubCmd::Publish {
+                self.sinkref_cmd.handle(&PubSubCmd::Publish {
                     topic: self.dst_topic.clone(),
                     payload: if self.on_state { self.dst_val[1].clone() } else { self.dst_val[0].clone() },
                 });

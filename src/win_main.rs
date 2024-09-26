@@ -11,6 +11,7 @@ use std::{env, sync::Arc};
 use std::sync::Mutex;
 
 use limero::*;
+use limero::ActorExt;
 
 mod widgets;
 use widgets::*;
@@ -25,8 +26,7 @@ mod store;
 use store::*;
 
 mod pubsub;
-use pubsub::{payload_decode, payload_display,payload_as_f64};
-use pubsub::{PubSubCmd, PubSubEvent};
+use msg::{payload_display, PubSubCmd, PubSubEvent};
 use pubsub::zenoh_pubsub::ZenohPubSubActor;
 use pubsub::mqtt_pubsub::MqttPubSubActor;
 mod logger;
@@ -53,11 +53,11 @@ async fn main() -> eframe::Result<()> {
 
   //  let mut pubsub = ZenohPubSubActor::new();
     let mut pubsub = MqttPubSubActor::new("mqtt://test.mosquitto.org", "test/#");
-    pubsub.sink_ref().push(PubSubCmd::Subscribe {
+    pubsub.handler().handle(&PubSubCmd::Subscribe {
         topic: "**".to_string(),
     });
-    pubsub.for_all( Box::new(
-       move  |event| {
+    pubsub.for_each_event( Box::new(
+       move  |event:&PubSubEvent| {
             match event {
                 PubSubEvent::Publish { topic, payload } => {
                     info!("Publish {} {}", topic, payload_display(&payload));

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
-use crate::{payload_decode, MyAppCmd};
-use crate::pubsub::payload_display;
+use crate:: MyAppCmd;
+use msg::payload_display;
 use crate::PubSubWindow;
 use egui::*;
 use egui_modal::Modal;

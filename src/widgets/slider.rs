@@ -2,12 +2,11 @@ use crate::draw_border;
 use crate::file_xml::WidgetParams;
 use crate::inside_rect;
 use limero::Endpoint;
-use crate::pubsub::payload_decode;
-use crate::pubsub::payload_display;
-use crate::pubsub::payload_encode;
+use msg::payload_encode;
+use msg::PubSubCmd;
+
 use crate::widgets::PubSubWidget;
 use crate::widgets::WidgetResult;
-use crate::PubSubCmd;
 use crate::WidgetMsg;
 use egui::containers::Frame;
 use egui::*;
@@ -48,9 +47,9 @@ impl PubSubWidget for Slider {
             )
             .drag_stopped()
         {
-            let _r = self.sinkref_cmd.push(PubSubCmd::Publish {
+            let _r = self.sinkref_cmd.handle(&PubSubCmd::Publish {
                 topic: self.dst_topic.clone(),
-                payload: payload_encode(self.value),
+                payload: payload_encode(&self.value),
             });
         }
     }

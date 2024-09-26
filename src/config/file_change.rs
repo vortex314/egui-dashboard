@@ -12,8 +12,8 @@ pub enum FileChangeEvent {
 
 pub struct FileChangeActor {
     file_name: String,
-    events: Source<FileChangeEvent>,
-    cmds: Sink<()>,
+    events: EventHandlers<FileChangeEvent>,
+    cmds: CmdQueue<()>,
     timers: Timers,
 }
 
@@ -21,19 +21,19 @@ pub struct FileChangeActor {
     pub fn new(file_name: String) -> Self {
         Self {
             file_name,
-            events: Source::new(),
-            cmds: Sink::new(1),
+            events: EventHandlers::new(),
+            cmds: CmdQueue::new(1),
             timers: Timers::new(),
         }
     }
 
     pub fn trigger_file_change(&mut self) {
-        self.events.emit(FileChangeEvent::FileChange("trigger".to_string()));
+        self.events.handle(&FileChangeEvent::FileChange("trigger".to_string()));
     }
 
 }
 
-impl ActorTrait<(), FileChangeEvent> for FileChangeActor {
+impl Actor<(), FileChangeEvent> for FileChangeActor {
     async fn run(&mut self) {
 
         let (mut sender,mut receiver ) = tokio::sync::mpsc::channel(10);
@@ -54,7 +54,7 @@ impl ActorTrait<(), FileChangeEvent> for FileChangeActor {
                         Some(FileChangeEvent::FileChange(_)) => {
                             info!("FileChange event : {:?}",m );
                             tokio::time::sleep(Duration::from_millis(100)).await;
-                            self.events.emit(FileChangeEvent::FileChange(self.file_name.clone()));
+                            self.events.handle(&FileChangeEvent::FileChange(self.file_name.clone()));
                         }
                         None => {
                             info!("FileChange event None");
@@ -68,17 +68,16 @@ impl ActorTrait<(), FileChangeEvent> for FileChangeActor {
         }
     }
 
+    fn add_listener(&mut self, handler: Box<dyn Handler<FileChangeEvent>>) {
+        self.events.add_listener(handler);
+    }
 
-    fn sink_ref(&self) -> SinkRef<()> {
-        self.cmds.sink_ref()
+    fn handler(&self) -> Box<dyn Handler<()>> {
+        self.cmds.handler()
     }
 }
 
-impl SourceTrait<FileChangeEvent> for FileChangeActor {
-    fn add_listener(&mut self, listener: SinkRef<FileChangeEvent>) {
-        self.events.add_listener(listener);
-    }
-}
+
 
 
 fn watching( file_name:String , _sender : Sender<FileChangeEvent>) -> notify::Result<()> {

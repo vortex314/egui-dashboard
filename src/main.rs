@@ -23,6 +23,8 @@ use file_xml::WidgetParams;
 use log::{error, info, warn};
 use minidom::Element;
 use mqtt_pubsub::MqttPubSubActor;
+use msg::PubSubCmd;
+use msg::PubSubEvent;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::env;
@@ -52,10 +54,31 @@ use widgets::*;
 use widgets::Label;
 
 use clap::Parser;
-use zenoh_pubsub::*;
+use limero::ActorExt;
 use limero::*;
+use zenoh_pubsub::*;
 mod config;
 use config::*;
+
+#[derive(Clone)]
+struct CloneableHandler<T> {
+    sender: Sender<T>,
+}
+
+impl<T> CloneableHandler<T> {
+    fn new(sender: Sender<T>) -> Self {
+        Self { sender }
+    }
+}
+
+impl<T> Handler<T> for CloneableHandler<T>
+where
+    T: Clone + Send + 'static,
+{
+    fn handle(&mut self, msg: &T) {
+        let _ = self.sender.try_send(msg.clone());
+    }
+}
 
 fn start_pubsub_mqtt(
     cfg: &Element,
@@ -64,7 +87,7 @@ fn start_pubsub_mqtt(
     let url = cfg.attr("url").unwrap_or("mqtt://pcthink.local:1883/");
     let pattern = cfg.attr("pattern").unwrap_or("#");
     let mut mqtt_actor = MqttPubSubActor::new(url, pattern);
-    let pubsub_cmd = mqtt_actor.sink_ref();
+    let pubsub_cmd = mqtt_actor.handler();
     mqtt_actor.add_listener(event_sink);
     tokio::spawn(async move {
         mqtt_actor.run().await;
@@ -80,18 +103,21 @@ fn start_pubsub_mqtt(
 fn start_pubsub_zenoh(
     cfg: &Element,
     event_sink: Endpoint<PubSubEvent>,
-) -> Result<Endpoint<PubSubCmd>, String> {
+) -> Result<Sender<PubSubCmd>, String> {
     let zenoh = cfg
         .get_child("Zenoh", "")
         .ok_or("Zenoh section not found")?;
     let mut zenoh_actor = ZenohPubSubActor::new();
-    let pubsub_cmd = zenoh_actor.sink_ref();
+    let mut pubsub_cmd = zenoh_actor.sender();
+    let mut pubsub_handler = zenoh_actor.handler();
     zenoh_actor.add_listener(event_sink);
     tokio::spawn(async move {
         zenoh_actor.run().await;
     });
-    pubsub_cmd.push(PubSubCmd::Connect);
-    pubsub_cmd.push(PubSubCmd::Subscribe {
+    pubsub_handler.handle(&PubSubCmd::Connect {
+        client_id: "dashboard".to_string(),
+    });
+    pubsub_handler.handle(&PubSubCmd::Subscribe {
         topic: "**".to_string(),
     });
     Ok(pubsub_cmd)
@@ -103,7 +129,7 @@ pub fn start_file_change_actor(db: Arc<Mutex<Dashboard>>) -> Result<(), String> 
     // File Change Actor
 
     let mut file_change_actor = FileChangeActor::new("./config.xml".to_string());
-    file_change_actor.for_all(Box::new(move |x: FileChangeEvent| {
+    file_change_actor.for_each_event(Box::new(move |x: &FileChangeEvent| {
         let mut binding = db.lock();
         let res = binding.as_mut().map(|mut db| {
             db.clear();
@@ -117,7 +143,7 @@ pub fn start_file_change_actor(db: Arc<Mutex<Dashboard>>) -> Result<(), String> 
                 .map_err(MyError::String)
                 .unwrap();
             for widget_params in widgets_params {
-                let widget = create_widget(&widget_params, db.pubsub_cmd.clone())
+                let widget = create_widget(&widget_params, Box::new(db.pubsub_cmd.clone()))
                     .map_err(MyError::String)
                     .unwrap();
                 db.add_widget(widget);
@@ -129,7 +155,6 @@ pub fn start_file_change_actor(db: Arc<Mutex<Dashboard>>) -> Result<(), String> 
     }));
 
     file_change_actor.trigger_file_change();
-
 
     tokio::spawn(async move {
         file_change_actor.run().await;
@@ -164,7 +189,7 @@ async fn main() -> Result<(), MyError<'static>> {
     let _ = logger::init();
     info!("Starting up. Reading config file {}.", &args.config);
 
-    let mut event_sink = limero::Sink::new(1000);
+    let mut event_sink = CmdQueue::new(1000);
 
     let root_config = load_xml_file("./config.xml").map_err(MyError::Xml)?;
     let pubsub_config = root_config
@@ -174,7 +199,8 @@ async fn main() -> Result<(), MyError<'static>> {
     start_pubsub_mqtt(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;*/
 
     let pubsub_cmd =
-        start_pubsub_zenoh(&pubsub_config, event_sink.sink_ref()).map_err(MyError::String)?;
+        start_pubsub_zenoh(&pubsub_config, event_sink.handler()).map_err(MyError::String)?;
+    let pubsub_cmd = CloneableHandler::new(pubsub_cmd);
 
     let dashboard = Arc::new(Mutex::new(Dashboard {
         widgets: Vec::new(),
@@ -224,7 +250,7 @@ async fn main() -> Result<(), MyError<'static>> {
 
 pub struct Dashboard {
     widgets: Vec<Box<dyn PubSubWidget + Send>>,
-    pubsub_cmd: Endpoint<PubSubCmd>,
+    pubsub_cmd: CloneableHandler<PubSubCmd>,
     context: Option<egui::Context>,
 }
 #[derive(Clone)]
@@ -252,7 +278,7 @@ impl eframe::App for DashboardApp {
 }
 
 impl Dashboard {
-    fn new(pubsub_cmd: Endpoint<PubSubCmd>, context: egui::Context) -> Self {
+    fn new(pubsub_cmd: CloneableHandler<PubSubCmd>, context: egui::Context) -> Self {
         Self {
             widgets: Vec::new(),
             pubsub_cmd,

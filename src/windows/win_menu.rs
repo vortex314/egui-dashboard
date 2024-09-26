@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 
-use crate::pubsub::payload_display;
+use msg::payload_display;
 use crate::PubSubWindow;
-use crate::{payload_decode, MyAppCmd, WinProgress};
+use crate::{ MyAppCmd, WinProgress};
 use egui::*;
 use egui_modal::Modal;
 use log::info;

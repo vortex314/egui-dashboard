@@ -17,6 +17,7 @@ use egui_extras::TableBuilder;
 use egui_plot::PlotPoints;
 use epaint::RectShape;
 use log::info;
+use msg::payload_display;
 use regex::Regex;
 use std::time::Duration;
 use std::time::Instant;
