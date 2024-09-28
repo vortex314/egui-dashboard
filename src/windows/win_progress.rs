@@ -36,6 +36,18 @@ impl WinProgress {
             context_menu_id: Id::new(format!("context_menu_{}", rng.gen::<u32>())),
         }
     }
+    pub fn topic(&mut self, topic: &str) -> &mut Self {
+        self.src_topic = topic.to_owned();
+        self
+    }
+    pub fn title(&mut self, title: &str) -> &mut Self {
+        self.title = title.to_owned();
+        self
+    }
+    pub fn prefix(&mut self, prefix: &str) -> &mut Self {
+        self.prefix = prefix.to_owned();
+        self
+    }
     pub fn fraction(&self, value: f64) -> f32 {
         let min = self.min_value.unwrap_or(0.0);
         let max = self.max_value.unwrap_or(1.0);

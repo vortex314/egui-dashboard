@@ -31,6 +31,8 @@ mod progress_v;
 pub use progress_v::ProgressV;
 mod switch;
 pub use switch::Switch;
+mod dial;
+pub use dial::Dial;
 /*pub mod progress;
 pub mod button;
 pub mod slider;

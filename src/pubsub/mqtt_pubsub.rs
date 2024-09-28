@@ -37,6 +37,7 @@ pub struct MqttPubSubActor {
     events: EventHandlers<PubSubEvent>,
     url: String,
     pattern: String,
+    connected : bool,
 }
 
 impl MqttPubSubActor {
@@ -48,6 +49,7 @@ impl MqttPubSubActor {
             events: EventHandlers::new(),
             url: url.to_string(),
             pattern: pattern.to_string(),
+            connected : false,
         }
     }
 }
@@ -70,6 +72,7 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
             return;
         }
         info!("Mqtt connected {}", self.url);
+        self.connected = true;
         match client.subscribe(subopts).await {
             Ok(_) => {
                 info!("Subscribed to MQTT");
@@ -126,7 +129,7 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                         }
                     }
                 },
-                    read_result = client.read_subscriptions() => {
+                    read_result =  client.read_subscriptions() => {
                     match read_result {
                         Ok(msg) => {
                             let topic = msg.topic().to_string();
@@ -140,6 +143,8 @@ impl Actor<PubSubCmd, PubSubEvent> for MqttPubSubActor {
                         }
                         Err(e) => {
                             error!("PubSubActor::run() error {:?} ",e);
+                            self.connected = false;
+                            self.events.handle(&PubSubEvent::Disconnected);
                             continue;
                         }
                     }

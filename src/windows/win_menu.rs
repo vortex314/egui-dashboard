@@ -16,7 +16,7 @@ pub struct WinMenu {
     pub title: String,
     pub regexp: String,
     pub status: u32,
-    pub window_types: Vec<String>,
+    pub topics: Vec<String>,
     windows: Arc<Mutex<Vec<Box<dyn PubSubWindow + Send>>>>,
 }
 
@@ -27,7 +27,7 @@ impl WinMenu {
             title: "Topics".to_owned(),
             regexp: ".*".to_owned(),
             status: 0,
-            window_types: vec!["status".to_owned(), "progress".to_owned()],
+            topics: vec!["status".to_owned(), "progress".to_owned()],
             windows,
         }
     }
@@ -65,16 +65,17 @@ impl PubSubWindow for WinMenu {
             .resizable(true)
             .collapsible(false)
             .constrain(false)
+            .scroll(true)
             //           .max_width(300.0)
             //           .max_height(600.0)
             .anchor(Align2::RIGHT_TOP, Vec2::new(0.0, 0.0));
         win.show(ctx, |ui| {
-            for window_type in self.window_types.iter() {
+            for topic in self.topics.iter() {
                 ui.horizontal(|ui| {
-                    let label1 = Button::new(window_type).sense(Sense::click());
+                    let label1 = Button::new(topic).sense(Sense::click());
                     if ui.add(label1).clicked() {
-                        info!("Clicked on {}", window_type);
-                        cmd = Some(MyAppCmd::AddWindow(self.create_new_window(&window_type)));
+                        info!("Clicked on {}", topic);
+                        cmd = Some(MyAppCmd::AddWindow(self.create_new_window(&topic)));
                     };
                 });
             }
@@ -84,5 +85,8 @@ impl PubSubWindow for WinMenu {
         cmd
     }
 
-    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {}
+    fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
+        info!("on_message {} {}", topic, payload_display(payload));
+        self.topics.push(topic.to_owned());
+    }
 }

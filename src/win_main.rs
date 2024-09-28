@@ -43,25 +43,18 @@ async fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default().with_inner_size([640.0, 480.0]),
         ..Default::default()
     };
-
-    let mut app = Box::<MyApp>::default();
-    app.windows.try_lock().ok().unwrap().push(Box::new(WinStatus::new()));
-    let mut windows = app.windows().clone();
-
-    app.windows.try_lock().ok().unwrap().push(Box::new(WinMenu::new(windows)));
-    let mut windows = app.windows().clone();
-
-  //  let mut pubsub = ZenohPubSubActor::new();
-    let mut pubsub = MqttPubSubActor::new("mqtt://test.mosquitto.org", "test/#");
+  let windows = Arc::new(Mutex::new(Vec::<Box<dyn PubSubWindow + Send >>::new()));
+    let mut pubsub = MqttPubSubActor::new("mqtt://test.mosquitto.org", "homeassistant/#");
     pubsub.handler().handle(&PubSubCmd::Subscribe {
         topic: "**".to_string(),
     });
+    let windows_clone = windows.clone();
     pubsub.for_each_event( Box::new(
        move  |event:&PubSubEvent| {
             match event {
                 PubSubEvent::Publish { topic, payload } => {
-                    info!("Publish {} {}", topic, payload_display(&payload));
-                    windows.lock().map(|mut windows| {
+                  //  info!("Publish {} {}", topic, payload_display(&payload));
+                    windows_clone.lock().map(|mut windows| {
                         for window in windows.iter_mut() {
                             window.on_message(&topic, &payload);
                         }
@@ -78,26 +71,9 @@ async fn main() -> eframe::Result<()> {
     });
 
         let native_options = eframe::NativeOptions::default();
-        eframe::run_native("MyApp", options, Box::new(|cc| Ok(Box::new(MyApp::new(cc)))))
-
-    /*eframe::run_native(
-        "PubSub Dashboard",
-        options,
-        Box::new(|cc| {
-            // Use the dark theme
-            let mut visuals = egui::Visuals::light();
-            visuals.window_fill = Color32::LIGHT_BLUE;
-            visuals.panel_fill = Color32::LIGHT_BLUE;
-
-            cc.egui_ctx.set_visuals(visuals);
-            // This gives us image support:
-       //     egui_extras::install_image_loaders(&cc.egui_ctx);
+        eframe::run_native("MyApp", options, Box::new(|cc| Ok(Box::new(MyApp::new(cc,windows)))))
 
 
-
-            app
-        }),
-    )*/
 }
 
 pub trait PubSubWindow {
@@ -114,8 +90,16 @@ pub enum MyAppCmd {
 }
 
 impl MyApp {
-    fn new(_cc: &eframe::CreationContext) -> Self {
-        Self::default()
+    fn new(_cc: &eframe::CreationContext,windows:Arc<Mutex<Vec::<Box<dyn PubSubWindow + Send >> >>) -> Self {
+       let mut db = Self::default();
+       db = Self {
+            windows,
+            ..db
+        };
+    //    db.windows.lock().unwrap().push(Box::new(WinStatus::new()));
+//        db.windows.lock().unwrap().push(Box::new(WinMenu::new(db.windows.clone())));
+        db.windows.lock().unwrap().push(Box::new(WinTopics::new(db.windows.clone())));
+        db
     }
     fn windows(&self) -> Arc<Mutex<Vec<Box<dyn PubSubWindow + Send >>>> {
         self.windows.clone()
@@ -132,6 +116,7 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+   //     info!("update windows count {}", self.windows.lock().unwrap().len());
        let l = self.windows.lock();
         if let Ok(mut windows) = l {
             let mut cmds = Vec::new();

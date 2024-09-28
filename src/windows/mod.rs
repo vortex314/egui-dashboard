@@ -10,3 +10,5 @@ mod win_topics;
 pub use win_topics::WinTopics as WinTopics;
 mod pubsub_window;
 pub use pubsub_window::PubSubWindow as PubSubWindow;
+mod win_text;
+pub use win_text::WinText as WinText;

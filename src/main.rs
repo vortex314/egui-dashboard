@@ -373,6 +373,7 @@ fn create_widget(
         "Slider" => Ok(Box::new(Slider::new(rect, cfg, cmd_sender))),
         "Space" => Ok(Box::new(Space::new(rect, cfg))),
         "Switch" => Ok(Box::new(Switch::new(rect, cfg, cmd_sender))),
+        "Dial" => Ok(Box::new(Dial::new(rect,cfg))),
         _ => Ok(Box::new(Label::new(rect, cfg))), //Err(format!("Unknown widget: {}", cfg.name)),
     }
 }

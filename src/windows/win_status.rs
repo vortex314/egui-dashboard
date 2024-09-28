@@ -10,6 +10,7 @@ pub struct WinStatus {
     rect: Rect,
     pub title: String,
     pub src_topic: String,
+    pub prefix: String,
     pub suffix: String,
     pub current_value: Option<f64>,
     pub min_value: Option<f64>,
@@ -26,6 +27,7 @@ impl WinStatus {
             rect: Rect::from_min_size([200.0, 200.0].into(), [300.0, 300.0].into()),
             title: "Latency".to_owned(),
             src_topic: "src/esp32/sys/latency".to_owned(),
+            prefix: "".to_owned(),
             suffix: "msec".to_owned(),
             current_value: None,
             min_value: None,
@@ -33,6 +35,18 @@ impl WinStatus {
             window_id: Id::new(format!("status_{}", rng.gen::<u32>())),
             context_menu_id: Id::new(format!("context_menu_{}", rng.gen::<u32>())),
         }
+    }
+    pub fn topic(&mut self, topic: &str) -> &mut Self {
+        self.src_topic = topic.to_owned();
+        self
+    }
+    pub fn title(&mut self, title: &str) -> &mut Self {
+        self.title = title.to_owned();
+        self
+    }
+    pub fn prefix(&mut self, prefix: &str) -> &mut Self {
+        self.prefix = prefix.to_owned();
+        self
     }
     fn context_menu(&mut self, ui: &mut Ui) {
         let topics = vec![
@@ -103,9 +117,9 @@ impl PubSubWindow for WinStatus {
             .default_pos(self.rect.min)
             .current_pos(self.rect.min)
             .frame(frame)
-            .title_bar(false)
+            .title_bar(true)
             .resizable(true)
-            .collapsible(false)
+            .collapsible(true)
             .constrain(false);
         win.show(ctx, |ui| {
             ui.vertical_centered(|ui| {
@@ -130,21 +144,23 @@ impl PubSubWindow for WinStatus {
 
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
         if topic == self.src_topic {
-            let new_value = payload_as_f64(payload).unwrap();
-            self.current_value = Some(new_value);
-            if self.min_value.is_none() {
-                self.min_value = Some(new_value);
-            };
-            if self.max_value.is_none() {
-                self.max_value = Some(new_value);
+            if let Ok(value) = payload_as_f64(payload) {
+                self.current_value = Some(value);
+                if self.min_value.is_none() {
+                    self.min_value = Some(value);
+                };
+                if self.max_value.is_none() {
+                    self.max_value = Some(value);
+                }
+
+                if value < self.min_value.unwrap() {
+                    self.min_value = Some(value);
+                }
+                if value > self.max_value.unwrap() {
+                    self.max_value = Some(value);
+                }
             }
 
-            if new_value < self.min_value.unwrap() {
-                self.min_value = Some(new_value);
-            }
-            if new_value > self.max_value.unwrap() {
-                self.max_value = Some(new_value);
-            }
         }
     }
 }

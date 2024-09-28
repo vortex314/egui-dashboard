@@ -49,10 +49,7 @@ impl PubSubWidget for Gauge {
                 WidgetResult::NoEffect
             }
         }
-
     }
-
-
 
     fn draw(&mut self, ui: &mut egui::Ui) {
         let mut range = self.min..=self.max;
