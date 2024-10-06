@@ -77,7 +77,7 @@ impl PubSubWidget for Plot {
                 if self.src_topic != *topic {
                     WidgetResult::NoEffect
                 } else {
-                    self.value = payload_as_f64(payload).unwrap_or(0.0);
+                    self.value = msg::cbor::as_f64(payload).unwrap_or(0.0);
                     self.timeseries.add(Instant::now(), self.value);
                     WidgetResult::Update
                 }

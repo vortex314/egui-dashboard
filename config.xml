@@ -6,41 +6,31 @@
     </PubSub>
     <Dashboard w="1024" h="768" label="Prototype Dashboard" theme="light">
         <Col w="1024">
-            <Row h="30">
-                <BrokerAlive w="50" label="ZENOH" />
-                <Button w="40" label="ON" dst="src/esp32/sys/test" dst_val='true' />
-                <Button w="40" label="OFF" dst="src/esp32/sys/test" dst_val='false' />
-                <Switch w="100" label="Switch" dst="src/esp32/sys/test" dst_val='true,false' src="src/esp32/sys/test" src_eval='msg_bool' timeout="4000"/>
-                <Label w="100" label="Test sub" src="src/esp32/sys/test" timeout="6000" />
-                <Label w="100" label="heap-size" src="src/esp32/sys/heap_free" timeout="6000" />
-                <Label w="200" label="Uptime" src="src/esp32/sys/uptime" timeout="3000" eval="humantime(msg_f64)"/>
-            </Row>
-            <Row h="100">
-                <Label w="150" label=" 70 x 50 Hello world fhdklhgfsqhgqsjk" src="src/esp32/sys/latency" timeout="3000" />
-                <Table w="500" label="Table" src=".*" timeout="10000" />
+            <Row h="200">
+                <Table label="Table" src=".*" timeout="10000" />
             </Row>
             <Row h="300">
-                <ProgressV w="50" label="Latency" suffix="msec" src="src/esp32/sys/latency" min="0.0" max="10.0"/>
-                <Plot  w="600" label="Plot" unit="V" src="dst/esp32_AB/lawnmower/speed" min="-500.0" max="500.0" timespan="1000000" samples="10000" />
-                <Gauge w="300" label="Speed" src="dst/esp32_AB/lawnmower/speed" suffix="rpm" timeout="100000" min="-500" max="500" />
-            </Row>
-            <Row h="30">
-                <Slider w="500" label="Slider" dst="src/esp32/sys/latency" min="1.0" max="10.0" />
-                <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide" min="0.0" max="10.0" />
-            </Row>
-            <Row h="30">
-                <Slider w="500" label="Speed" dst="dst/esp32_AB/lawnmower/speed" min="-500.0" max="500.0" />
-                <ProgressH w="500" label="Speed" unit="msec" src="dst/esp32_AB/lawnmower/speed" min="-500.0" max="500.0" />
+                <ProgressV w="50" label="Latency" suffix="msec" src="src/ps4/accel_z" min="-9000" max="9000"/>
+                <Plot w="600" label="Plot" unit="V" src="src/ps4/accel_y" min="-10000.0" max="10000.0" timespan="1000000" samples="10000" />
+                <Gauge w="300" label="Accel." src="src/ps4/accel_x" suffix="g" timeout="100000" min="-10000" max="10000" />
+                <Gauge w="300" label="Accel." src="src/ps4/accel_y" suffix="g" timeout="100000" min="-10000" max="10000" />
+                <Gauge w="300" label="Accel." src="src/ps4/accel_z" suffix="g" timeout="100000" min="-10000" max="10000" />
+
             </Row>
             <Row h="30">
                 <Slider w="500" label="Slider" dst="dst/esp32/sys/slide2" min="1.0" max="10.0" />
                 <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide2" min="0.0" max="10.0" />
             </Row>
-            <Row h="30">
-                <Slider w="500" label="Slider" dst="dst/esp32/sys/slide3" min="0.0" max="10.0" />
-                <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide3" min="0.0" max="10.0" />
-            </Row>
-
+            <ProgressH h="20" label="axis_x" unit="" src="src/ps4/axis_x" min="-128" max="128" />
+            <ProgressH h="20" label="axis_y" unit="" src="src/ps4/axis_y" min="-128" max="128" />
+            <ProgressH h="20" label="axis_rx" unit="" src="src/ps4/axis_rx" min="-128" max="128" />
+            <ProgressH h="20" label="axis_ry" unit="" src="src/ps4/axis_ry" min="-128" max="128" />
+            <ProgressH h="20" label="accel_x" unit="" src="src/ps4/accel_x" min="-10000" max="10000" />
+            <ProgressH h="20" label="accel_y" unit="" src="src/ps4/accel_y" min="-10000" max="10000" />
+            <ProgressH h="20" label="accel_z" unit="" src="src/ps4/accel_z" min="-10000" max="10000" />
+            <ProgressH h="20" label="gyro_x" unit="" src="src/ps4/gyro_x" min="-10000" max="10000" />
+            <ProgressH h="20" label="gyro_y" unit="" src="src/ps4/gyro_y" min="-10000" max="10000" />
+            <ProgressH h="20" label="gyro_z" unit="" src="src/ps4/gyro_z" min="-10000" max="10000" />
         </Col>
     </Dashboard>
 </Config>

@@ -37,7 +37,7 @@ impl PubSubWidget for ProgressH {
                 if self.src_topic != *topic {
                     WidgetResult::NoEffect
                 } else {
-                    if let Ok(new_value)  = payload_as_f64(payload){
+                    if let Ok(new_value)  = msg::cbor::as_f64(payload){
                         self.value = new_value;
                         self.expire_time = Instant::now() + self.expire_duration;
                         return WidgetResult::Update;

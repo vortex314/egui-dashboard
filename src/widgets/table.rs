@@ -39,7 +39,7 @@ impl PubSubWidget for Table {
         match event {
             WidgetMsg::Pub { topic, payload } => {
                 if self.regex.is_match(topic) {
-                    self.table.add(topic.to_string(), payload_display(&payload));
+                    self.table.add(topic.to_string(), msg::cbor::to_string(&payload));
                     WidgetResult::Update
                 } else {
                     WidgetResult::NoEffect

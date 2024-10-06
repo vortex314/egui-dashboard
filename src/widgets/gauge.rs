@@ -36,7 +36,7 @@ impl PubSubWidget for Gauge {
                 if self.src_topic != *topic {
                     WidgetResult::NoEffect
                 } else {
-                    self.value = payload_as_f64(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
+                    self.value = msg::cbor::as_f64(payload).unwrap_or(payload_decode::<u64>(payload).unwrap_or(self.min as u64 ) as f64);
                     self.expire_time = Instant::now() + self.expire_duration;
                         WidgetResult::Update
                     
