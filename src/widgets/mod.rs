@@ -33,6 +33,8 @@ mod switch;
 pub use switch::Switch;
 mod dial;
 pub use dial::Dial;
+mod gauge_h;
+pub use gauge_h::GaugeH;
 /*pub mod progress;
 pub mod button;
 pub mod slider;

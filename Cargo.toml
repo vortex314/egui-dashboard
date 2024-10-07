@@ -30,7 +30,7 @@ chrono = "0.4.19" # for time
 mqtt-async-client = "0.3.1" # for mqtt
 tokio = { version = "*", features = ["full"] }
 tokio-stream = { version = "*", features = ["full"] }
-tokio-util = { version ="0.7",default_features=false,features = ["codec"] }
+tokio-util = { version ="0.7",default-features=false,features = ["codec"] }
 regex = "*"
 evalexpr = "11.3.0" # for expression evaluation
 humantime = "2.1.0" # for human readable time

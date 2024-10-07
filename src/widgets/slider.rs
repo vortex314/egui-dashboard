@@ -49,7 +49,7 @@ impl PubSubWidget for Slider {
         {
             let _r = self.sinkref_cmd.handle(&PubSubCmd::Publish {
                 topic: self.dst_topic.clone(),
-                payload: payload_encode(&self.value),
+                payload: msg::cbor::encode(&self.value),
             });
         }
     }

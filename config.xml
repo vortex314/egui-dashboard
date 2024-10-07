@@ -15,12 +15,12 @@
                 <Gauge w="300" label="Accel." src="src/ps4/accel_x" suffix="g" timeout="100000" min="-10000" max="10000" />
                 <Gauge w="300" label="Accel." src="src/ps4/accel_y" suffix="g" timeout="100000" min="-10000" max="10000" />
                 <Gauge w="300" label="Accel." src="src/ps4/accel_z" suffix="g" timeout="100000" min="-10000" max="10000" />
-
             </Row>
             <Row h="30">
-                <Slider w="500" label="Slider" dst="dst/esp32/sys/slide2" min="1.0" max="10.0" />
+                <Slider w="500" label="Slider" dst="dst/esp32/sys/slide2" min="-128.0" max="128.0" />
                 <ProgressH w="500" label="Progress" unit="msec" src="dst/esp32/sys/slide2" min="0.0" max="10.0" />
             </Row>
+            <GaugeH h="50" label="test" unit="" src="dst/esp32/sys/slide2" min="-128" max="128" />
             <ProgressH h="20" label="axis_x" unit="" src="src/ps4/axis_x" min="-128" max="128" />
             <ProgressH h="20" label="axis_y" unit="" src="src/ps4/axis_y" min="-128" max="128" />
             <ProgressH h="20" label="axis_rx" unit="" src="src/ps4/axis_rx" min="-128" max="128" />
