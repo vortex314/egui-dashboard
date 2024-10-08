@@ -12,9 +12,9 @@
             <Row h="300">
                 <ProgressV w="50" label="Latency" suffix="msec" src="src/ps4/accel_z" min="-9000" max="9000"/>
                 <Plot w="600" label="Plot" unit="V" src="src/ps4/accel_y" min="-10000.0" max="10000.0" timespan="1000000" samples="10000" />
-                <Gauge w="300" label="Accel." src="src/ps4/accel_x" suffix="g" timeout="100000" min="-10000" max="10000" />
-                <Gauge w="300" label="Accel." src="src/ps4/accel_y" suffix="g" timeout="100000" min="-10000" max="10000" />
-                <Gauge w="300" label="Accel." src="src/ps4/accel_z" suffix="g" timeout="100000" min="-10000" max="10000" />
+                <Gauge w="300" label="X" src="src/ps4/accel_x" suffix="g" timeout="100000" min="-10000" max="10000" />
+                <Gauge w="300" label="Y" src="src/ps4/accel_y" suffix="g" timeout="100000" min="-10000" max="10000" />
+                <Gauge w="300" label="Z" src="src/ps4/accel_z" suffix="g" timeout="100000" min="-10000" max="10000" />
             </Row>
             <Row h="30">
                 <Slider w="500" label="Slider" dst="dst/esp32/sys/slide2" min="-1000.0" max="128.0" />
@@ -28,12 +28,12 @@
             <GaugeH h="30" label="axis_y" unit="" src="src/ps4/axis_y" min="-128" max="128" />
             <GaugeH h="30" label="axis_rx" unit="" src="src/ps4/axis_rx" min="-128" max="128" />
             <GaugeH h="30" label="axis_ry" unit="" src="src/ps4/axis_ry" min="-128" max="128" />
-            <ProgressH h="20" label="accel_x" unit="" src="src/ps4/accel_x" min="-10000" max="10000" />
-            <ProgressH h="20" label="accel_y" unit="" src="src/ps4/accel_y" min="-10000" max="10000" />
-            <ProgressH h="20" label="accel_z" unit="" src="src/ps4/accel_z" min="-10000" max="10000" />
-            <ProgressH h="20" label="gyro_x" unit="" src="src/ps4/gyro_x" min="-10000" max="10000" />
-            <ProgressH h="20" label="gyro_y" unit="" src="src/ps4/gyro_y" min="-10000" max="10000" />
-            <ProgressH h="20" label="gyro_z" unit="" src="src/ps4/gyro_z" min="-10000" max="10000" />
+            <GaugeH h="30" label="accel_x" unit="" src="src/ps4/accel_x" min="-10000" max="10000" />
+            <GaugeH h="30" label="accel_y" unit="" src="src/ps4/accel_y" min="-10000" max="10000" />
+            <GaugeH h="30" label="accel_z" unit="" src="src/ps4/accel_z" min="-10000" max="10000" />
+            <GaugeH h="30" label="gyro_x" unit="" src="src/ps4/gyro_x" min="-10000" max="10000" />
+            <GaugeH h="30" label="gyro_y" unit="" src="src/ps4/gyro_y" min="-10000" max="10000" />
+            <GaugeH h="30" label="gyro_z" unit="" src="src/ps4/gyro_z" min="-10000" max="10000" />
         </Col>
     </Dashboard>
 </Config>
