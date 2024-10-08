@@ -45,7 +45,7 @@ impl PubSubWidget for Slider {
                 egui::Slider::new(&mut self.value, self.min as f32..=self.max as f32)
                     .text(self.label.clone()),
             )
-            .drag_stopped()
+            .dragged()
         {
             let _r = self.sinkref_cmd.handle(&PubSubCmd::Publish {
                 topic: self.dst_topic.clone(),

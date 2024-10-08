@@ -41,7 +41,7 @@ pub mod slider;
 pub mod table;
 pub mod plot;*/
 
-use msg::{payload_as_f64, payload_decode, payload_encode, PubSubCmd};
+use msg:: PubSubCmd;
 
 #[derive(PartialEq)]
 pub enum WidgetResult {
@@ -113,9 +113,9 @@ impl Eval {
     }
 
     pub fn common_eval(&mut self, payload: &Vec<u8>) -> Result<Value, EvalError> {
-        let v64 = payload_as_f64(&payload);
-        let vstr = payload_decode::<String>(payload);
-        let m_bool = payload_decode::<bool>(payload);
+        let v64 = msg::cbor::as_f64(&payload);
+        let vstr = msg::cbor::decode::<String>(payload);
+        let m_bool = msg::cbor::decode::<bool>(payload);
         self.context.clear_variables();
         if let Ok(v) = v64 {
             self.context
@@ -158,10 +158,10 @@ impl Eval {
 
 fn value_to_payload_1(value: &Value) -> Vec<u8> {
     match value {
-        Value::Int(x) => payload_encode(x),
-        Value::Float(x) => payload_encode(x),
-        Value::Boolean(x) => payload_encode(x),
-        Value::String(x) => payload_encode(x),
+        Value::Int(x) => msg::cbor::encode(x),
+        Value::Float(x) => msg::cbor::encode(x),
+        Value::Boolean(x) => msg::cbor::encode(x),
+        Value::String(x) => msg::cbor::encode(x),
         Value::Tuple(x) => {
             let mut v = Vec::new();
             for i in x {
@@ -239,20 +239,20 @@ pub fn value_to_payload_array(value: &Value) -> Result<Vec<Payload>, EvalError> 
             }
             Ok(v)
         }
-        Value::String(s) => Ok(vec![payload_encode(s)]),
-        Value::Int(i) => Ok(vec![payload_encode(i)]),
-        Value::Float(f) => Ok(vec![payload_encode(f)]),
-        Value::Boolean(b) => Ok(vec![payload_encode(b)]),
+        Value::String(s) => Ok(vec![msg::cbor::encode(s)]),
+        Value::Int(i) => Ok(vec![msg::cbor::encode(i)]),
+        Value::Float(f) => Ok(vec![msg::cbor::encode(f)]),
+        Value::Boolean(b) => Ok(vec![msg::cbor::encode(b)]),
         Value::Empty => Ok(Vec::new()),
     }
 }
 
 pub fn value_to_payload(value: &Value) -> Result<Payload, EvalError> {
     match value {
-        Value::String(s) => Ok(payload_encode(s)),
-        Value::Int(i) => Ok(payload_encode(i)),
-        Value::Float(f) => Ok(payload_encode(f)),
-        Value::Boolean(b) => Ok(payload_encode(b)),
+        Value::String(s) => Ok(msg::cbor::encode(s)),
+        Value::Int(i) => Ok(msg::cbor::encode(i)),
+        Value::Float(f) => Ok(msg::cbor::encode(f)),
+        Value::Boolean(b) => Ok(msg::cbor::encode(b)),
         Value::Tuple(a) => Err(EvalError::ParseError),
         Value::Empty => Ok(Vec::new()),
     }

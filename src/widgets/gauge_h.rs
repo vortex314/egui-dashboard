@@ -32,7 +32,7 @@ pub struct GaugeH {
     min: f32,
     max: f32,
     major_ticks: Vec<f32>,
-    minor_ticks : Vec<f32>,
+    minor_ticks: Vec<f32>,
 }
 
 impl PubSubWidget for GaugeH {
@@ -73,55 +73,51 @@ impl PubSubWidget for GaugeH {
     fn draw(&mut self, ui: &mut egui::Ui) {
         let _ = major_ticks(self.min, self.max);
         let s = format!("{:.3} {}", self.value, self.suffix);
-        let rect = inside_rect(self.rect, 2.0);
+        let rect = inside_rect(self.rect, 1.0);
         {
-            let rect = Rect::from_min_max(Pos2::new(rect.min.x,rect.center().y), rect.max);
-        //    let rect = Rect::everything_below(rect.min.y + (rect.max.y-rect.min.y)/2.0);
-            // horizontal line
+            // horizontal line through center
             ui.painter().hline(
                 Rangef::new(rect.min.x, rect.max.x),
-                rect.min.y,
-                Stroke::new(2.0, Color32::BLACK),
+                rect.left_center().y,
+                Stroke::new(1.0, Color32::BLACK),
             );
-            // major_ticks lines
-            for marker in self.major_ticks.iter() {
-                let x = scale(*marker, self.min, self.max, rect.min.x, rect.max.x);
-                ui.painter().vline(
-                    x,
-                    Rangef::new(rect.min.y, rect.max.y),
-                    Stroke::new(1.0, Color32::BLACK),
-                );
-            }
+            // tick marks
             for marker in self.minor_ticks.iter() {
                 let x = scale(*marker, self.min, self.max, rect.min.x, rect.max.x);
                 ui.painter().vline(
                     x,
-                    Rangef::new(rect.min.y, rect.center().y),
+                    Rangef::new(rect.center().y, rect.center().y + 5.0),
                     Stroke::new(1.0, Color32::BLACK),
                 );
             }
         }
-        { // major_ticks value
-            let rect = Rect::from_min_max( rect.min,Pos2::new(rect.max.x,rect.min.y + rect.height()/2.0));
-            for marker in self.major_ticks.iter() {
+        {
+            // tick texts
+            for marker in self.minor_ticks.iter() {
                 let x = scale(*marker, self.min, self.max, rect.min.x, rect.max.x);
-                let text_rect = Rect::from_min_max(Pos2::new(x-20.0,rect.min.y), Pos2::new(x+20.0,rect.min.y));
-                ui.put(
-                    text_rect,
-                    egui::Label::new(format!(
-                    "{}",
-                   marker)));
-
+                let text_rect = Rect::from_min_max(
+                    Pos2::new(x - 20.0, rect.max.y - 12.0),
+                    Pos2::new(x + 20.0, rect.max.y - 12.0),
+                );
+                ui.put(text_rect, egui::Label::new(format!("{}", marker)));
             }
+            // value text
+            let text_rect = Rect::from_min_max(rect.left_top(), rect.right_center());
+            ui.put(
+                text_rect,
+                egui::Label::new(format!("{} {}",  self.value, self.suffix))
+            );
         }
-        { // triangle needle 
-            let y = rect.min.y + 3.0 / 4.0 * ( rect.max.y-rect.min.y ); // bottom y coord needle
-            let x = scale( self.value,self.min,self.max,rect.min.x,rect.max.x);
-            let pos1 = Pos2::new(x-5.0,y+15.0);
-            let pos2 = Pos2::new(x,y);
-            let pos3 = Pos2::new(x+5.0,y+15.0); 
-            let points = vec![pos1,pos2,pos3];
-            let path_shape = PathShape::convex_polygon(points, Color32::RED, Stroke::new(2.0, Color32::RED));
+        {
+            // triangle needle - V shape
+            let y = rect.center().y; // bottom y coord needle
+            let x = scale(self.value, self.min, self.max, rect.min.x, rect.max.x);
+            let pos1 = Pos2::new(x - 5.0, y - 15.0);
+            let pos2 = Pos2::new(x, y);
+            let pos3 = Pos2::new(x + 5.0, y - 15.0);
+            let points = vec![pos1, pos2, pos3];
+            let path_shape =
+                PathShape::convex_polygon(points, Color32::RED, Stroke::new(2.0, Color32::RED));
 
             ui.painter().add(path_shape);
         }
@@ -132,8 +128,8 @@ impl GaugeH {
     pub fn new(rect: Rect, cfg: &WidgetParams) -> Self {
         let min = cfg.get_or_default("min", 0.0);
         let max = cfg.get_or_default("max", 1.0);
-        let (major_step, major_ticks ) = major_ticks(min, max);
-        let minor_ticks = minor_ticks(major_step,min,max);
+        let (major_step, major_ticks) = major_ticks(min, max);
+        let minor_ticks = minor_ticks(major_step, min, max);
 
         Self {
             rect,
@@ -162,14 +158,10 @@ impl GaugeH {
     }
 }
 
-fn in_range(value: f32, min: f32, max: f32) -> bool {
-    value >= min && value <= max
-}
-
-pub fn major_ticks(min: f32, max: f32) -> (f32,Vec<f32>) {
+pub fn major_ticks(min: f32, max: f32) -> (f32, Vec<f32>) {
     let mut m = VecDeque::new();
-    let mut start_pow = (max-min).log10().ceil();
-    let mut current_pow = (max-min).log10().floor();
+    let mut start_pow = (max - min).log10().ceil();
+    let mut current_pow = (max - min).log10().floor();
     let mut step: f32 = 10f32.powf(current_pow);
     loop {
         m.clear();
@@ -191,15 +183,14 @@ pub fn major_ticks(min: f32, max: f32) -> (f32,Vec<f32>) {
     }
     m.push_back(max);
     m.push_front(min);
-    (step,m.into())
+    (step, m.into())
 }
 
-fn minor_ticks(major_step:f32, min:f32,max:f32) -> Vec<f32> {
-    let minor_step = major_step / 10.0;
+fn minor_ticks(major_step: f32, min: f32, max: f32) -> Vec<f32> {
     let mut m = VecDeque::new();
-    let mut start_pow = (max-min).log10().ceil();
-    let mut current_pow = (max-min).log10().floor();
-    let mut step: f32 = 10f32.powf(current_pow);
+    let mut start_pow = (max - min).log10().ceil();
+    let mut current_pow = (max - min).log10().floor();
+    let mut minor_step = major_step / 2.0;
     loop {
         m.clear();
         let mut value = 10f32.powf(start_pow);
@@ -207,17 +198,17 @@ fn minor_ticks(major_step:f32, min:f32,max:f32) -> Vec<f32> {
             if in_range(value, min, max) {
                 m.push_front(value);
             }
-            value -= step;
+            value -= minor_step;
             if value < min {
                 break;
             };
         }
-        if m.len() > 10 {
+        if m.len() > 7 {
             break;
         }
         current_pow -= 1f32;
-        step = 10f32.powf(current_pow);
-    } 
+        minor_step = minor_step / 2.0;
+    }
     m.into()
 }
 
@@ -230,3 +221,25 @@ fn scale(value: f32, min: f32, max: f32, x1: f32, x2: f32) -> f32 {
         x1 + ((value - min) / (max - min)) * (x2 - x1)
     }
 }
+
+fn count_ticks(step: f32, min: f32, max: f32) -> u32 {
+    let mut cursor = max;
+    let mut count = 0;
+    loop {
+        cursor -= step;
+        if !in_range(cursor, min, max) {
+            break;
+        };
+        count += 1;
+    }
+    count
+}
+
+fn in_range(value: f32, min: f32, max: f32) -> bool {
+    value >= min && value <= max
+}
+
+/*
+examples : 35.1 - 36.1 -> 36
+10.0 -> 15.0 ->
+*/

@@ -9,6 +9,7 @@ use egui::*;
 use epaint::RectShape;
 use evalexpr::ContextWithMutableVariables;
 use log::info;
+use msg::cbor;
 use msg::payload_display;
 use std::time::Duration;
 use std::time::Instant;
@@ -57,7 +58,7 @@ impl PubSubWidget for Label {
                         Ok(value) => value,
                         Err(e) => {
                             // info!("Error evaluating expression: {}:{} =>  {:?} for widget Label ",&topic, payload_display(payload),e);
-                            payload_display(payload)
+                            msg::cbor::to_string(payload)
                         }
                     };
                     self.expire_time = Instant::now() + self.expire_duration;
