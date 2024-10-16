@@ -35,6 +35,8 @@ mod dial;
 pub use dial::Dial;
 mod gauge_h;
 pub use gauge_h::GaugeH;
+mod gauge_r;
+pub use gauge_r::GaugeR;
 /*pub mod progress;
 pub mod button;
 pub mod slider;

@@ -12,9 +12,9 @@
             <Row h="300">
                 <ProgressV w="50" label="Latency" suffix="msec" src="src/ps4/accel_z" min="-9000" max="9000"/>
                 <Plot w="600" label="Plot" unit="V" src="src/ps4/accel_y" min="-10000.0" max="10000.0" timespan="1000000" samples="10000" />
-                <Gauge w="300" label="X" src="src/ps4/accel_x" suffix="g" timeout="100000" min="-10000" max="10000" />
-                <Gauge w="300" label="Y" src="src/ps4/accel_y" suffix="g" timeout="100000" min="-10000" max="10000" />
-                <Gauge w="300" label="Z" src="src/ps4/accel_z" suffix="g" timeout="100000" min="-10000" max="10000" />
+                <Gauge w="300" label="X" src="src/lm1/hb/IN1_CMD" suffix="g" timeout="100000" min="-300" max="300" />
+                <Gauge w="300" label="Y" src="src/lm1/hb/IN2_CMD" suffix="g" timeout="100000" min="-300" max="300" />
+                <GaugeR w="300" label="Z" src="src/ps4/accel_z" suffix="g" timeout="100000" min="-10000" max="10000" />
             </Row>
             <Row h="30">
                 <Slider w="500" label="Slider" dst="dst/esp32/sys/slide2" min="-1000.0" max="128.0" />

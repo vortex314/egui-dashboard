@@ -375,6 +375,7 @@ fn create_widget(
         "Switch" => Ok(Box::new(Switch::new(rect, cfg, cmd_sender))),
         "Dial" => Ok(Box::new(Dial::new(rect,cfg))),
         "GaugeH" => Ok(Box::new(GaugeH::new(rect,cfg))),
+        "GaugeR" => Ok(Box::new(GaugeR::new(rect,cfg))),
         _ => Ok(Box::new(Label::new(rect, cfg))), //Err(format!("Unknown widget: {}", cfg.name)),
     }
 }
