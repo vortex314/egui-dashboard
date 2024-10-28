@@ -17,7 +17,7 @@ path = "src/main.rs"
 clap = { version="4.0.8", features=["derive"]}
 eframe =  { version="0.28.1" }
 egui = { version="0.28.1",features=["callstack"]}
-egui_extras={ version="0.28.1",features=[]}
+egui_extras={ version="0.28.1",features=["all_loaders"]}
 egui_plot = { version="0.28.1",features=[]} 
 egui-modal = { version="*",features=[]} 
 log = "0.4.14" # for logging

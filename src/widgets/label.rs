@@ -46,6 +46,10 @@ impl Label {
     fn expired(&self) -> bool {
         Instant::now() > self.expire_time
     }
+
+    fn set_rect(&mut self, rect : Rect) {
+        self.rect = rect;
+    }
 }
 
 impl PubSubWidget for Label {

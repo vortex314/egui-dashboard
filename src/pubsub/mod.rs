@@ -1,5 +1,6 @@
 pub mod mqtt_pubsub;
 pub mod zenoh_pubsub;
+pub mod mock_pubsub;
 
 use std::any::Any;
 use std::convert::Infallible;
