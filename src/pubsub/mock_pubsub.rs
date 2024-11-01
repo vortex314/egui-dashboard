@@ -4,6 +4,7 @@ use log::*;
 use msg::payload_display;
 use msg::PubSubCmd;
 use msg::PubSubEvent;
+use rand::Rng;
 use tokio::sync::mpsc::Sender;
 use std::collections::BTreeMap;
 use std::io;
@@ -77,6 +78,10 @@ impl Actor<PubSubCmd, PubSubEvent> for MockPubSubActor {
                                     payload: mock_value.bytes.clone(),
                                 });
                             }
+                            self.event_handlers.handle(&PubSubEvent::Publish {
+                                topic: "test/c".to_string(),
+                                payload: minicbor::to_vec(rand::random::<f32>()).unwrap(),
+                            });
                         }
                         _ => {
                             info!("PubSubActor::run() Timer {}", idx);

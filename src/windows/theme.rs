@@ -1,6 +1,6 @@
 use egui::Color32;
-struct Theme {
-    pub active_foreground_color : Color32,
+pub struct Theme {
+    pub active_foreground_color : Vec<Color32>,
     pub static_color : Color32,
     pub background_color : Color32,
 }
@@ -8,7 +8,7 @@ struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Self {
-            active_foreground_color: Color32::BLUE,
+            active_foreground_color: vec![Color32::BLUE,Color32::RED,Color32::GREEN,Color32::YELLOW,Color32::CYAN,Color32::MAGENTA],
             static_color: Color32::BLACK,
             background_color: Color32::WHITE,
         }

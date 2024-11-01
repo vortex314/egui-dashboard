@@ -92,7 +92,7 @@ impl PubSubWindow for WinText {
 
     fn on_message(&mut self, topic: &str, payload: &Vec<u8>) {
         if topic == self.src_topic {
-            self.current_value = Some(payload_display(payload));
+            self.current_value = Some(format!("{}",minicbor::display(payload)));
         }
     }
 }
