@@ -8,7 +8,7 @@ pub struct Theme {
 impl Default for Theme {
     fn default() -> Self {
         Self {
-            active_foreground_color: vec![Color32::BLUE,Color32::RED,Color32::GREEN,Color32::YELLOW,Color32::CYAN,Color32::MAGENTA],
+            active_foreground_color: vec![Color32::BLUE,Color32::RED,Color32::GREEN,Color32::YELLOW,],
             static_color: Color32::BLACK,
             background_color: Color32::WHITE,
         }

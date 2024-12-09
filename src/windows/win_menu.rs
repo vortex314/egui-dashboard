@@ -19,8 +19,8 @@ const PROGRESS_ICON: ImageSource<'_> = include_image!("../../assets/progress.png
 const TEXT_ICON: ImageSource<'_> = include_image!("../../assets/text.png");
 const LABEL_ICON: ImageSource<'_> = include_image!("../../assets/label.png");
 
+#[derive(Debug)]
 enum IconEvent {
-    NoEvent,
     Folder,
     Save,
     Gauge,
@@ -62,7 +62,7 @@ impl WinMenu {
         Box::new(WinStatus::new())
     }
 
-    fn button_bar( ui:&mut Ui )-> IconEvent {
+    fn button_bar( &mut self, ui:&mut Ui )-> Option<IconEvent> {
     
         ui.horizontal(|ui| {
             if ui
@@ -75,7 +75,7 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on folder icon");
-                return IconEvent::Folder;
+                return Some(IconEvent::Folder);
             }
             if ui
                 .add(
@@ -87,7 +87,7 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on save icon");
-                return IconEvent::Save;
+                return Some(IconEvent::Save);
             }
             if ui
                 .add(
@@ -99,7 +99,8 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on gauge icon");
-                return IconEvent::Gauge;
+
+                return SOme(IconEvent::Gauge);
             }
             if ui
                 .add(
@@ -111,7 +112,7 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on graph icon");
-                return IconEvent::Graph;
+                return Some(IconEvent::Graph);
             }
             if ui
                 .add(
@@ -123,7 +124,7 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on progress icon");
-                return IconEvent::Progress;
+                return Some(IconEvent::Progress);
             }
             if ui
                 .add(
@@ -135,7 +136,7 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on text icon");
-                return IconEvent::Text;
+                return Some(IconEvent::Text);
             }
             if ui
                 .add(
@@ -147,13 +148,10 @@ impl WinMenu {
                 .clicked()
             {
                 info!("Clicked on label icon");
-                return IconEvent::Label;
-            } else {
-                return IconEvent::NoEvent;
-            }
+                return Some(IconEvent::Label);
+            } 
         });
-
-        IconEvent::NoEvent
+        None
     }
 }
 
@@ -182,18 +180,17 @@ impl PubSubWindow for WinMenu {
             .max_height(20.0)
             .anchor(Align2::LEFT_TOP, Vec2::new(0.0, 0.0));
         win.show(ctx, |ui| {
-            let event = Self::button_bar(ui);
-            
-
-            /*for topic in self.topics.iter() {
-                ui.horizontal(|ui| {
-                    let label1 = Button::new(topic).sense(Sense::click());
-                    if ui.add(label1).clicked() {
-                        info!("Clicked on {}", topic);
-                        cmd = Some(MyAppCmd::AddWindow(self.create_new_window(&topic)));
-                    };
-                });
-            }*/
+            self.button_bar(ui).map(|icon_event| {
+                info!(" icon button {:?} clicked ",icon_event);
+                match icon_event {
+                    IconEvent::Folder => {
+                        let win_gauge = WinGauge::new();
+                        let r = self.windows.try_lock();
+                        let _ = r.map(|mut r| r.push(Box::new(win_gauge)));
+                    }
+                    _ => {}
+                }
+                cmd = Some(MyAppCmd::AddWindow(self.create_new_window("status")))});
             //    ui.allocate_space(ui.available_size());
         });
         self.rect = ctx.memory(|mem| mem.area_rect(window_id).map(|rect| rect).unwrap());
